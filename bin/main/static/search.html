@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Search — CineStream</title>
+    <link rel="stylesheet" href="/css/main.css" />
+    <style>
+        .search-header {
+            padding: 32px 40px 0;
+        }
+        .search-input-wrap {
+            position: relative;
+            max-width: 560px;
+            margin-bottom: 24px;
+        }
+        .search-input-wrap svg {
+            position: absolute;
+            left: 16px; top: 50%;
+            transform: translateY(-50%);
+            width: 18px; height: 18px;
+            color: var(--grey-3);
+            pointer-events: none;
+        }
+        .search-input {
+            width: 100%;
+            padding: 14px 16px 14px 46px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--grey-4);
+            border-radius: 50px;
+            color: var(--white);
+            font-size: 16px;
+            outline: none;
+            transition: border-color var(--transition);
+        }
+        .search-input:focus { border-color: var(--crimson); }
+        .search-input::placeholder { color: var(--grey-3); }
+
+        .search-type-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .results-count {
+            font-size: 13px;
+            color: var(--grey-3);
+            padding: 0 40px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 40px;
+            gap: 16px;
+            color: var(--grey-2);
+            text-align: center;
+        }
+        .empty-state svg { width: 64px; height: 64px; color: var(--grey-4); }
+        .empty-state h3 { font-size: 20px; font-weight: 700; color: var(--white); }
+        .empty-state p  { font-size: 14px; max-width: 320px; }
+
+        @media (max-width: 768px) {
+            .search-header { padding: 24px 16px 0; }
+            .results-count { padding: 0 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="navbar-root"></div>
+
+<main class="page-wrap">
+    <div class="search-header">
+        <div class="search-input-wrap">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <input type="text" class="search-input" id="search-input" placeholder="Search movies, TV shows..." autocomplete="off" autofocus />
+        </div>
+
+        <div class="search-type-tabs">
+            <button class="filter-btn active" data-type="multi">All</button>
+            <button class="filter-btn" data-type="movie">Movies</button>
+            <button class="filter-btn" data-type="tv">TV Shows</button>
+        </div>
+    </div>
+
+    <div class="results-count" id="results-count"></div>
+    <div class="grid" id="search-grid"></div>
+    <div id="pagination-wrap"></div>
+</main>
+
+<script type="module">
+    import { tmdb } from '/js/api.js';
+    import { auth } from '/js/auth.js';
+    import {
+        renderNavbar, initNavbar,
+        createCard, skeletonGrid,
+        createPagination, escHtml
+    } from '/js/components.js';
+
+    /* ── Navbar ─────────────────────────────────────────── */
+    document.getElementById('navbar-root').innerHTML = renderNavbar();
+    initNavbar();
+
+    /* ── State ──────────────────────────────────────────── */
+    let currentQuery = '';
+    let currentType  = 'multi';
+    let currentPage  = 1;
+    let totalPages   = 1;
+    let debounceTimer;
+
+    const input     = document.getElementById('search-input');
+    const grid      = document.getElementById('search-grid');
+    const countEl   = document.getElementById('results-count');
+    const paginWrap = document.getElementById('pagination-wrap');
+
+    /* ── Pre-fill from URL ?q= ──────────────────────────── */
+    const urlParams = new URLSearchParams(location.search);
+    const qParam    = urlParams.get('q');
+    if (qParam) {
+        input.value   = qParam;
+        currentQuery  = qParam;
+    }
+
+    /* ── Render empty / prompt state ────────────────────── */
+    function showPrompt() {
+        countEl.textContent = '';
+        paginWrap.innerHTML = '';
+        grid.innerHTML = `
+        <div class="empty-state" style="grid-column:1/-1;">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+          <h3>Search for something</h3>
+          <p>Find your favorite movies and TV shows by typing in the box above.</p>
+        </div>`;
+    }
+
+    function showNoResults(query) {
+        grid.innerHTML = `
+        <div class="empty-state" style="grid-column:1/-1;">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+          <h3>No results for "${escHtml(query)}"</h3>
+          <p>Try checking your spelling or use a different search term.</p>
+        </div>`;
+    }
+
+    /* ── Perform search ──────────────────────────────────── */
+    async function performSearch() {
+        if (!currentQuery.trim()) { showPrompt(); return; }
+
+        grid.innerHTML = skeletonGrid(12);
+        paginWrap.innerHTML = '';
+        countEl.textContent = '';
+
+        try {
+            const res = await tmdb.search(currentQuery, currentPage, currentType);
+            let results = (res.results || []).filter(i =>
+                i.poster_path && (i.media_type !== 'person')
+            );
+
+            // Ensure media_type set when type filter narrows it
+            if (currentType !== 'multi') {
+                results.forEach(i => { i.media_type = currentType; });
+            }
+
+            totalPages = Math.min(res.total_pages || 1, 500);
+
+            if (!results.length) {
+                showNoResults(currentQuery);
+                return;
+            }
+
+            countEl.textContent = `${res.total_results || results.length} results for "${currentQuery}"`;
+
+            grid.innerHTML = '';
+            results.forEach(item => grid.appendChild(createCard(item)));
+
+            if (totalPages > 1) {
+                paginWrap.appendChild(
+                    createPagination(currentPage, totalPages, (page) => {
+                        currentPage = page;
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        performSearch();
+                    })
+                );
+            }
+
+        } catch (err) {
+            console.error(err);
+            grid.innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1;">
+            <h3>Search failed</h3>
+            <p>${err.message || 'Please try again.'}</p>
+          </div>`;
+        }
+    }
+
+    /* ── Debounced input handler ─────────────────────────── */
+    input.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        const val = input.value.trim();
+        debounceTimer = setTimeout(() => {
+            currentQuery = val;
+            currentPage  = 1;
+            // Update URL without reload
+            const url = new URL(location);
+            if (val) url.searchParams.set('q', val); else url.searchParams.delete('q');
+            history.replaceState(null, '', url);
+            performSearch();
+        }, 350);
+    });
+
+    /* ── Type filter tabs ─────────────────────────────────── */
+    document.querySelectorAll('.search-type-tabs .filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.search-type-tabs .filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentType = btn.dataset.type;
+            currentPage = 1;
+            performSearch();
+        });
+    });
+
+    /* ── Init ───────────────────────────────────────────── */
+    if (currentQuery) performSearch();
+    else showPrompt();
+</script>
+</body>
+</html>

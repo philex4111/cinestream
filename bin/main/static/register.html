@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Account — CineStream</title>
+    <link rel="stylesheet" href="/css/main.css" />
+    <style>
+        .auth-page {
+            background:
+                    linear-gradient(rgba(10,10,10,0.92), rgba(10,10,10,0.97)),
+                    radial-gradient(circle at 70% 20%, rgba(229,9,20,0.15), transparent 50%);
+        }
+        .auth-footer-link { text-align: center; font-size: 14px; color: var(--grey-2); margin-top: 24px; }
+        .auth-footer-link a { color: var(--white); font-weight: 600; }
+        .auth-footer-link a:hover { color: var(--crimson); }
+        .password-row { display: flex; align-items: center; justify-content: space-between; }
+        .password-toggle { font-size: 12px; color: var(--grey-2); cursor: pointer; }
+        .password-toggle:hover { color: var(--white); }
+        .form-submit-btn { width: 100%; justify-content: center; padding: 13px; font-size: 15px; }
+        .form-submit-btn:disabled { opacity: 0.6; pointer-events: none; }
+
+        /* Password strength meter */
+        .strength-meter {
+            display: flex;
+            gap: 4px;
+            margin-top: 8px;
+        }
+        .strength-bar {
+            flex: 1;
+            height: 3px;
+            border-radius: 2px;
+            background: var(--grey-4);
+            transition: background var(--transition);
+        }
+        .strength-bar.weak   { background: #ef4444; }
+        .strength-bar.medium { background: #f59e0b; }
+        .strength-bar.strong { background: #22c55e; }
+        .strength-label {
+            font-size: 11px;
+            color: var(--grey-3);
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="auth-page">
+    <div class="auth-card">
+        <a href="/" class="auth-logo">
+            <div class="logo-icon" style="width:32px;height:32px;background:var(--crimson);border-radius:6px;display:flex;align-items:center;justify-content:center;">
+                <svg viewBox="0 0 24 24" fill="white" width="18" height="18"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+            CineStream
+        </a>
+
+        <h1 class="auth-title">Create your account</h1>
+        <p class="auth-sub">Start watching in seconds</p>
+
+        <form id="register-form" novalidate>
+            <div class="form-group">
+                <label class="form-label" for="username">Username</label>
+                <input type="text" id="username" class="form-input" placeholder="yourname" autocomplete="username" required minlength="3" />
+                <div class="form-error" id="username-error">Username must be at least 3 characters</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="email">Email</label>
+                <input type="email" id="email" class="form-input" placeholder="you@example.com" autocomplete="email" required />
+                <div class="form-error" id="email-error">Please enter a valid email address</div>
+            </div>
+
+            <div class="form-group">
+                <div class="password-row">
+                    <label class="form-label" for="password">Password</label>
+                    <span class="password-toggle" id="toggle-password">Show</span>
+                </div>
+                <input type="password" id="password" class="form-input" placeholder="••••••••" autocomplete="new-password" required minlength="8" />
+                <div class="strength-meter" id="strength-meter">
+                    <div class="strength-bar"></div>
+                    <div class="strength-bar"></div>
+                    <div class="strength-bar"></div>
+                </div>
+                <div class="strength-label" id="strength-label">At least 8 characters</div>
+                <div class="form-error" id="password-error">Password must be at least 8 characters</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="confirm-password">Confirm Password</label>
+                <input type="password" id="confirm-password" class="form-input" placeholder="••••••••" autocomplete="new-password" required />
+                <div class="form-error" id="confirm-error">Passwords do not match</div>
+            </div>
+
+            <div class="form-error" id="form-error" style="margin-bottom:16px;"></div>
+
+            <button type="submit" class="btn btn-crimson form-submit-btn" id="submit-btn">
+                Create Account
+            </button>
+        </form>
+
+        <div class="auth-footer-link">
+            Already have an account? <a href="/login.html">Sign in</a>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { authApi } from '/js/api.js';
+    import { auth } from '/js/auth.js';
+    import { toast } from '/js/components.js';
+
+    auth.redirectIfLoggedIn('/');
+
+    const form           = document.getElementById('register-form');
+    const usernameInput  = document.getElementById('username');
+    const emailInput     = document.getElementById('email');
+    const passInput      = document.getElementById('password');
+    const confirmInput   = document.getElementById('confirm-password');
+
+    const usernameError  = document.getElementById('username-error');
+    const emailError     = document.getElementById('email-error');
+    const passError      = document.getElementById('password-error');
+    const confirmError   = document.getElementById('confirm-error');
+    const formError      = document.getElementById('form-error');
+
+    const submitBtn       = document.getElementById('submit-btn');
+    const togglePass       = document.getElementById('toggle-password');
+    const strengthBars    = document.querySelectorAll('.strength-bar');
+    const strengthLabel   = document.getElementById('strength-label');
+
+    togglePass.addEventListener('click', () => {
+        const isPwd = passInput.type === 'password';
+        passInput.type = confirmInput.type = isPwd ? 'text' : 'password';
+        togglePass.textContent = isPwd ? 'Hide' : 'Show';
+    });
+
+    function validEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+
+    /* ── Password strength ── */
+    function checkStrength(pwd) {
+        let score = 0;
+        if (pwd.length >= 8) score++;
+        if (pwd.length >= 12) score++;
+        if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) score++;
+        if (/\d/.test(pwd)) score++;
+        if (/[^A-Za-z0-9]/.test(pwd)) score++;
+
+        let level = 'weak', label = 'Weak — add more characters';
+        if (score >= 4) { level = 'strong'; label = 'Strong password'; }
+        else if (score >= 2) { level = 'medium'; label = 'Medium — could be stronger'; }
+        if (!pwd) label = 'At least 8 characters';
+
+        strengthBars.forEach((bar, i) => {
+            bar.className = 'strength-bar';
+            const threshold = level === 'strong' ? 3 : level === 'medium' ? 2 : 1;
+            if (pwd && i < threshold) bar.classList.add(level);
+        });
+        strengthLabel.textContent = label;
+    }
+
+    passInput.addEventListener('input', () => checkStrength(passInput.value));
+
+    function clearErrors() {
+        [usernameError, emailError, passError, confirmError, formError].forEach(el => el.classList.remove('visible'));
+        formError.textContent = '';
+    }
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearErrors();
+
+        let valid = true;
+        if (usernameInput.value.trim().length < 3) { usernameError.classList.add('visible'); valid = false; }
+        if (!validEmail(emailInput.value.trim())) { emailError.classList.add('visible'); valid = false; }
+        if (passInput.value.length < 8) { passError.classList.add('visible'); valid = false; }
+        if (confirmInput.value !== passInput.value) { confirmError.classList.add('visible'); valid = false; }
+        if (!valid) return;
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating account...';
+
+        try {
+            const res = await authApi.register(
+                emailInput.value.trim(),
+                usernameInput.value.trim(),
+                passInput.value
+            );
+            auth.save(res.token, res.username);
+            toast(`Welcome to CineStream, ${res.username}!`, 'success');
+            location.href = '/';
+        } catch (err) {
+            formError.textContent = err.message || 'Registration failed. Please try again.';
+            formError.classList.add('visible');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Account';
+        }
+    });
+</script>
+</body>
+</html>

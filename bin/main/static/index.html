@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CineStream — Watch Free Movies & TV</title>
+    <link rel="stylesheet" href="/css/main.css" />
+</head>
+<body>
+
+<!-- Navbar injected by JS -->
+<div id="navbar-root"></div>
+
+<!-- ── Hero ─────────────────────────────────────────────── -->
+<section class="hero" id="hero">
+    <div class="hero-backdrop" id="hero-backdrop"></div>
+    <div class="hero-content">
+        <div class="hero-badge" id="hero-badge"></div>
+        <h1 class="hero-title" id="hero-title">Loading...</h1>
+        <div class="hero-meta" id="hero-meta"></div>
+        <p class="hero-overview" id="hero-overview"></p>
+        <div class="hero-actions" id="hero-actions"></div>
+    </div>
+    <div class="hero-dots" id="hero-dots"></div>
+</section>
+
+<!-- ── Page content ─────────────────────────────────────── -->
+<main class="page-wrap" style="padding-top:0;">
+
+    <!-- Top 10 Today -->
+    <div id="section-top10"></div>
+
+    <!-- Trending — Movies / Series tabs -->
+    <div id="section-trending"></div>
+
+    <!-- Popular Movies -->
+    <div id="section-movies"></div>
+
+    <!-- Popular TV -->
+    <div id="section-tv"></div>
+
+</main>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script type="module">
+    import { tmdb, backdropUrl, posterUrl } from '/js/api.js';
+    import { auth } from '/js/auth.js';
+    import {
+        renderNavbar, initNavbar,
+        createSlider, createCard,
+        skeletonCards, toast, icons, escHtml
+    } from '/js/components.js';
+
+    /* ── Navbar ─────────────────────────────────────────── */
+    document.getElementById('navbar-root').innerHTML = renderNavbar('home');
+    initNavbar();
+
+    /* ── Hero state ─────────────────────────────────────── */
+    let heroItems   = [];
+    let heroIndex   = 0;
+    let heroTimer   = null;
+
+    const backdropEl  = document.getElementById('hero-backdrop');
+    const badgeEl     = document.getElementById('hero-badge');
+    const titleEl     = document.getElementById('hero-title');
+    const metaEl      = document.getElementById('hero-meta');
+    const overviewEl  = document.getElementById('hero-overview');
+    const actionsEl   = document.getElementById('hero-actions');
+    const dotsEl      = document.getElementById('hero-dots');
+
+    function setHero(item, animate = true) {
+        const type    = item.media_type || (item.first_air_date ? 'tv' : 'movie');
+        const title   = item.title || item.name || '';
+        const year    = (item.release_date || item.first_air_date || '').slice(0, 4);
+        const rating  = item.vote_average?.toFixed(1) || '–';
+        const genres  = (item.genre_ids || []).slice(0, 3).map(id => genreMap[id]).filter(Boolean);
+
+        // Backdrop
+        const bgUrl = backdropUrl(item.backdrop_path);
+        if (bgUrl) {
+            if (animate) backdropEl.classList.remove('zoomed');
+            backdropEl.style.backgroundImage = `url(${bgUrl})`;
+            setTimeout(() => backdropEl.classList.add('zoomed'), 100);
+        }
+
+        badgeEl.innerHTML = `${icons.star} Trending Now`;
+
+        titleEl.textContent = title;
+
+        metaEl.innerHTML = `
+        <span class="rating">${icons.star} ${rating}</span>
+        <span class="dot"></span>
+        <span>${year}</span>
+        ${genres.map(g => `<span class="dot"></span><span class="genre-tag">${escHtml(g)}</span>`).join('')}
+      `;
+
+        overviewEl.textContent = item.overview || '';
+
+        actionsEl.innerHTML = '';
+        const playBtn = document.createElement('a');
+        playBtn.href  = `/watch.html?id=${item.id}&type=${type}`;
+        playBtn.className = 'btn btn-primary';
+        playBtn.innerHTML = `${icons.play} Play`;
+
+        const moreBtn = document.createElement('a');
+        moreBtn.href  = `/detail.html?id=${item.id}&type=${type}`;
+        moreBtn.className = 'btn btn-secondary';
+        moreBtn.innerHTML = `${icons.info} See More`;
+
+        actionsEl.appendChild(playBtn);
+        actionsEl.appendChild(moreBtn);
+
+        // Dots
+        dotsEl.querySelectorAll('.hero-dot').forEach((d, i) => {
+            d.classList.toggle('active', i === heroIndex);
+        });
+    }
+
+    function startHeroTimer() {
+        clearInterval(heroTimer);
+        heroTimer = setInterval(() => {
+            heroIndex = (heroIndex + 1) % Math.min(heroItems.length, 8);
+            setHero(heroItems[heroIndex]);
+            dotsEl.querySelectorAll('.hero-dot').forEach((d, i) =>
+                d.classList.toggle('active', i === heroIndex));
+        }, 7000);
+    }
+
+    /* ── Genre map (will be filled after fetch) ─────────── */
+    let genreMap = {};
+
+    /* ── Skeleton sections while loading ────────────────── */
+    document.getElementById('section-top10').innerHTML     = `<section class="section"><div class="section-header"><h2 class="section-title">Top 10 Today</h2></div><div class="slider-wrap"><div class="slider">${skeletonCards(6, 'top10')}</div></div></section>`;
+    document.getElementById('section-trending').innerHTML  = `<section class="section"><div class="section-header"><h2 class="section-title">Trending Today</h2></div><div class="slider-wrap"><div class="slider">${skeletonCards(6, 'wide')}</div></div></section>`;
+    document.getElementById('section-movies').innerHTML    = `<section class="section"><div class="section-header"><h2 class="section-title">Popular Movies</h2></div><div class="slider-wrap"><div class="slider">${skeletonCards(8)}</div></div></section>`;
+    document.getElementById('section-tv').innerHTML        = `<section class="section"><div class="section-header"><h2 class="section-title">Popular TV Shows</h2></div><div class="slider-wrap"><div class="slider">${skeletonCards(8)}</div></div></section>`;
+
+    /* ── Fetch everything in parallel ───────────────────── */
+    async function loadPage() {
+        try {
+            const [trending, popularMovies, popularTV, movieGenres, tvGenres] = await Promise.all([
+                tmdb.trending('day'),
+                tmdb.popularMovies(),
+                tmdb.popularTV(),
+                tmdb.genreList('movie'),
+                tmdb.genreList('tv'),
+            ]);
+
+            // Build genre map
+            [...(movieGenres.genres || []), ...(tvGenres.genres || [])].forEach(g => {
+                genreMap[g.id] = g.name;
+            });
+
+            // ── Hero setup
+            heroItems = (trending.results || []).filter(i => i.backdrop_path).slice(0, 8);
+            if (heroItems.length) {
+                // Build dots
+                dotsEl.innerHTML = heroItems.map((_, i) =>
+                    `<div class="hero-dot ${i === 0 ? 'active' : ''}" data-i="${i}"></div>`
+                ).join('');
+                dotsEl.querySelectorAll('.hero-dot').forEach(dot => {
+                    dot.addEventListener('click', () => {
+                        heroIndex = +dot.dataset.i;
+                        setHero(heroItems[heroIndex]);
+                        startHeroTimer();
+                    });
+                });
+                setHero(heroItems[0], false);
+                startHeroTimer();
+            }
+
+            // ── Top 10
+            const top10Items = (trending.results || []).slice(0, 10);
+            const top10Section = createSlider('Top 10 Today', top10Items, { cardVariant: 'top10' });
+            document.getElementById('section-top10').replaceWith(top10Section);
+
+            // ── Trending — with Movies / Series tab toggle
+            const trendingMovies = (trending.results || []).filter(i => i.media_type === 'movie');
+            const trendingTV     = (trending.results || []).filter(i => i.media_type === 'tv');
+            const trendingSection = createSlider('Trending Today', trendingMovies, {
+                cardVariant: 'wide',
+                tabs: [
+                    { label: 'Movies', value: 'movie' },
+                    { label: 'Series', value: 'tv' },
+                ],
+                onTabChange: async (tab) => {
+                    if (tab === 'movie') return trendingMovies;
+                    return trendingTV;
+                },
+            });
+            document.getElementById('section-trending').replaceWith(trendingSection);
+
+            // ── Popular Movies
+            const moviesSection = createSlider('Popular Movies', popularMovies.results || []);
+            document.getElementById('section-movies').replaceWith(moviesSection);
+
+            // ── Popular TV
+            const tvSection = createSlider('Popular TV Shows', popularTV.results || []);
+            document.getElementById('section-tv').replaceWith(tvSection);
+
+        } catch (err) {
+            console.error(err);
+            toast('Failed to load content. Check your connection.', 'error');
+        }
+    }
+
+    loadPage();
+
+    /* ── Pause hero on hover ────────────────────────────── */
+    document.getElementById('hero').addEventListener('mouseenter', () => clearInterval(heroTimer));
+    document.getElementById('hero').addEventListener('mouseleave', startHeroTimer);
+</script>
+</body>
+</html>

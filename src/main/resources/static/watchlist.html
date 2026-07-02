@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Watchlist — CineStream</title>
+    <link rel="stylesheet" href="/css/main.css" />
+    <style>
+        .wl-header {
+            padding: 32px 40px 0;
+        }
+        .wl-title {
+            font-family: var(--font-display);
+            font-size: 36px;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+        .wl-sub {
+            font-size: 14px;
+            color: var(--grey-2);
+            margin-bottom: 24px;
+        }
+        .wl-count {
+            font-size: 13px;
+            color: var(--grey-3);
+            padding: 0 40px;
+            margin-bottom: 16px;
+        }
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 100px 40px;
+            gap: 16px;
+            color: var(--grey-2);
+            text-align: center;
+        }
+        .empty-state svg { width: 72px; height: 72px; color: var(--grey-4); }
+        .empty-state h3 { font-size: 22px; font-weight: 700; color: var(--white); }
+        .empty-state p  { font-size: 14px; max-width: 360px; }
+
+        /* Remove button on card overlay */
+        .wl-remove-btn {
+            position: absolute;
+            top: 10px; right: 10px;
+            width: 30px; height: 30px;
+            border-radius: 50%;
+            background: rgba(10,10,10,0.85);
+            color: var(--white);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0;
+            transition: all var(--transition);
+            z-index: 3;
+        }
+        .card:hover .wl-remove-btn { opacity: 1; }
+        .wl-remove-btn:hover { background: var(--crimson); }
+        .wl-remove-btn svg { width: 16px; height: 16px; }
+
+        @media (max-width: 768px) {
+            .wl-header { padding: 24px 16px 0; }
+            .wl-count  { padding: 0 16px; }
+            .wl-remove-btn { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="navbar-root"></div>
+
+<main class="page-wrap">
+    <div class="wl-header">
+        <h1 class="wl-title">My Watchlist</h1>
+        <p class="wl-sub">Movies and shows you've saved to watch later</p>
+    </div>
+
+    <div class="wl-count" id="wl-count"></div>
+    <div class="grid" id="wl-grid"></div>
+</main>
+
+<script type="module">
+    import { tmdb, watchlistApi } from '/js/api.js';
+    import { auth } from '/js/auth.js';
+    import {
+        renderNavbar, initNavbar,
+        createCard, skeletonGrid,
+        toast, icons
+    } from '/js/components.js';
+
+    /* ── Require login ─────────────────────────────────── */
+    if (!auth.requireAuth()) {
+        // requireAuth already redirected
+    }
+
+    /* ── Navbar ─────────────────────────────────────────── */
+    document.getElementById('navbar-root').innerHTML = renderNavbar('watchlist');
+    initNavbar();
+
+    const grid    = document.getElementById('wl-grid');
+    const countEl = document.getElementById('wl-count');
+
+    function showEmpty() {
+        countEl.textContent = '';
+        grid.innerHTML = `
+        <div class="empty-state" style="grid-column:1/-1;">
+          ${icons.heart.replace('<svg', '<svg style="width:72px;height:72px;color:var(--grey-4);"')}
+          <h3>Your watchlist is empty</h3>
+          <p>Browse movies and shows, then tap the + button to save them here for later.</p>
+          <a href="/browse.html" class="btn btn-crimson" style="margin-top:8px;">Browse Content</a>
+        </div>`;
+    }
+
+    async function loadWatchlist() {
+        grid.innerHTML = skeletonGrid(10);
+
+        try {
+            const entries = await watchlistApi.get();
+
+            if (!entries.length) { showEmpty(); return; }
+
+            countEl.textContent = `${entries.length} title${entries.length !== 1 ? 's' : ''} saved`;
+
+            // Fetch full details for each entry (in parallel)
+            const items = await Promise.all(
+                entries.map(async (entry) => {
+                    try {
+                        const data = entry.mediaType === 'tv'
+                            ? await tmdb.tv(entry.tmdbId)
+                            : await tmdb.movie(entry.tmdbId);
+                        data.media_type = entry.mediaType;
+                        data.id = entry.tmdbId;
+                        return data;
+                    } catch (_) {
+                        return null;
+                    }
+                })
+            );
+
+            const validItems = items.filter(Boolean).filter(i => i.poster_path);
+
+            if (!validItems.length) { showEmpty(); return; }
+
+            grid.innerHTML = '';
+            validItems.forEach(item => {
+                const card = createCard(item);
+                card.style.position = 'relative';
+
+                // Remove button
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'wl-remove-btn';
+                removeBtn.title = 'Remove from watchlist';
+                removeBtn.innerHTML = icons.close;
+                removeBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    removeBtn.style.opacity = '0.5';
+                    try {
+                        await watchlistApi.remove(item.id, item.media_type);
+                        card.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+                        card.style.opacity = '0';
+                        card.style.transform = 'scale(0.9)';
+                        setTimeout(() => {
+                            card.remove();
+                            const remaining = grid.children.length;
+                            countEl.textContent = `${remaining} title${remaining !== 1 ? 's' : ''} saved`;
+                            if (!remaining) showEmpty();
+                        }, 250);
+                        toast('Removed from watchlist');
+                    } catch (err) {
+                        toast(err.message || 'Failed to remove', 'error');
+                        removeBtn.style.opacity = '1';
+                    }
+                });
+
+                card.appendChild(removeBtn);
+                grid.appendChild(card);
+            });
+
+        } catch (err) {
+            console.error(err);
+            grid.innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1;">
+            <h3>Failed to load watchlist</h3>
+            <p>${err.message || 'Please try again.'}</p>
+            <button class="btn btn-crimson" onclick="location.reload()">Retry</button>
+          </div>`;
+        }
+    }
+
+    loadWatchlist();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+.gradle/
+build/
+*.db
+*.db-shm
+*.db-wal
+.env
+local.properties
+*.class
+*.jar
+out/
+.idea/
+*.iml

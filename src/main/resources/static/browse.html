@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Browse — CineStream</title>
+    <link rel="stylesheet" href="/css/main.css" />
+    <style>
+        .browse-header {
+            padding: 32px 40px 0;
+        }
+        .browse-title {
+            font-family: var(--font-display);
+            font-size: 36px;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+        .browse-sub {
+            font-size: 14px;
+            color: var(--grey-2);
+            margin-bottom: 24px;
+        }
+        .results-count {
+            font-size: 13px;
+            color: var(--grey-3);
+            padding: 0 40px;
+            margin-bottom: 16px;
+        }
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 40px;
+            gap: 16px;
+            color: var(--grey-2);
+            text-align: center;
+        }
+        .empty-state svg {
+            width: 64px; height: 64px;
+            color: var(--grey-4);
+        }
+        .empty-state h3 { font-size: 20px; font-weight: 700; color: var(--white); }
+        .empty-state p  { font-size: 14px; max-width: 320px; }
+
+        @media (max-width: 768px) {
+            .browse-header { padding: 24px 16px 0; }
+            .results-count { padding: 0 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="navbar-root"></div>
+
+<main class="page-wrap">
+    <div class="browse-header">
+        <h1 class="browse-title">Browse</h1>
+        <p class="browse-sub">Explore movies and TV shows</p>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar" id="filter-bar">
+        <!-- Type filters -->
+        <button class="filter-btn active" data-type="all">All</button>
+        <button class="filter-btn" data-type="movie">Movies</button>
+        <button class="filter-btn" data-type="tv">TV Shows</button>
+
+        <div style="width:1px;height:24px;background:var(--grey-4);margin:0 4px;"></div>
+
+        <!-- Genre dropdown -->
+        <select class="filter-select" id="genre-select">
+            <option value="">All Genres</option>
+        </select>
+
+        <!-- Sort -->
+        <select class="filter-select" id="sort-select">
+            <option value="popularity.desc">Most Popular</option>
+            <option value="vote_average.desc">Top Rated</option>
+            <option value="release_date.desc">Newest</option>
+            <option value="release_date.asc">Oldest</option>
+        </select>
+    </div>
+
+    <!-- Results count -->
+    <div class="results-count" id="results-count"></div>
+
+    <!-- Grid -->
+    <div class="grid" id="browse-grid"></div>
+
+    <!-- Pagination -->
+    <div id="pagination-wrap"></div>
+</main>
+
+<script type="module">
+    import { tmdb } from '/js/api.js';
+    import { auth } from '/js/auth.js';
+    import {
+        renderNavbar, initNavbar,
+        createCard, skeletonGrid,
+        createPagination, toast, escHtml
+    } from '/js/components.js';
+
+    /* ── Navbar ─────────────────────────────────────────── */
+    document.getElementById('navbar-root').innerHTML = renderNavbar('browse');
+    initNavbar();
+
+    /* ── State ──────────────────────────────────────────── */
+    let currentType  = 'all';
+    let currentGenre = '';
+    let currentPage  = 1;
+    let totalPages   = 1;
+    let genreMap     = { movie: [], tv: [] };
+
+    const grid       = document.getElementById('browse-grid');
+    const paginWrap  = document.getElementById('pagination-wrap');
+    const countEl    = document.getElementById('results-count');
+    const genreSel   = document.getElementById('genre-select');
+    const sortSel    = document.getElementById('sort-select');
+
+    /* ── Load genres ────────────────────────────────────── */
+    async function loadGenres() {
+        try {
+            const [mg, tvg] = await Promise.all([
+                tmdb.genreList('movie'),
+                tmdb.genreList('tv'),
+            ]);
+            genreMap.movie = mg.genres || [];
+            genreMap.tv    = tvg.genres || [];
+            updateGenreDropdown();
+        } catch (_) {}
+    }
+
+    function updateGenreDropdown() {
+        const genres = currentType === 'tv'
+            ? genreMap.tv
+            : currentType === 'movie'
+                ? genreMap.movie
+                : [...new Map(
+                    [...genreMap.movie, ...genreMap.tv].map(g => [g.id, g])
+                ).values()];
+
+        const prev = genreSel.value;
+        genreSel.innerHTML = `<option value="">All Genres</option>` +
+            genres.map(g => `<option value="${g.id}" ${String(g.id) === prev ? 'selected' : ''}>${escHtml(g.name)}</option>`).join('');
+        if (!genres.find(g => String(g.id) === prev)) {
+            currentGenre = '';
+            genreSel.value = '';
+        }
+    }
+
+    /* ── Fetch & render ─────────────────────────────────── */
+    async function loadContent() {
+        grid.innerHTML = skeletonGrid(20);
+        paginWrap.innerHTML = '';
+        countEl.textContent = '';
+
+        try {
+            let results = [];
+            let total   = 1;
+
+            if (currentType === 'movie' || currentType === 'all') {
+                const res = await tmdb.popularMovies(currentPage);
+                let items = res.results || [];
+                if (currentGenre) items = items.filter(m => m.genre_ids?.includes(+currentGenre));
+                if (currentType === 'movie') {
+                    results = items;
+                    total   = res.total_pages || 1;
+                } else {
+                    // all — merge movies + tv
+                    const tvRes  = await tmdb.popularTV(currentPage);
+                    let tvItems  = tvRes.results || [];
+                    if (currentGenre) tvItems = tvItems.filter(t => t.genre_ids?.includes(+currentGenre));
+                    // interleave and shuffle by popularity
+                    results = [...items, ...tvItems].sort((a, b) => b.popularity - a.popularity);
+                    total   = Math.max(res.total_pages || 1, tvRes.total_pages || 1);
+                }
+            } else {
+                const res = await tmdb.popularTV(currentPage);
+                let items = res.results || [];
+                if (currentGenre) items = items.filter(t => t.genre_ids?.includes(+currentGenre));
+                results = items;
+                total   = res.total_pages || 1;
+            }
+
+            totalPages = Math.min(total, 500); // TMDB caps at 500
+
+            // Sort
+            const sort = sortSel.value;
+            if (sort === 'vote_average.desc') results.sort((a,b) => b.vote_average - a.vote_average);
+            else if (sort === 'release_date.desc') results.sort((a,b) =>
+                new Date(b.release_date || b.first_air_date || 0) - new Date(a.release_date || a.first_air_date || 0));
+            else if (sort === 'release_date.asc') results.sort((a,b) =>
+                new Date(a.release_date || a.first_air_date || 0) - new Date(b.release_date || b.first_air_date || 0));
+
+            // Filter out items without posters
+            results = results.filter(i => i.poster_path);
+
+            // Render
+            grid.innerHTML = '';
+            if (!results.length) {
+                grid.innerHTML = `
+            <div class="empty-state" style="grid-column:1/-1;">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>
+              <h3>Nothing found</h3>
+              <p>Try a different genre or filter combination.</p>
+            </div>`;
+                return;
+            }
+
+            countEl.textContent = `${results.length} titles · Page ${currentPage} of ${totalPages}`;
+
+            results.forEach(item => {
+                // Ensure media_type is set for cards
+                if (!item.media_type) {
+                    item.media_type = item.first_air_date ? 'tv' : 'movie';
+                }
+                grid.appendChild(createCard(item));
+            });
+
+            // Pagination
+            if (totalPages > 1) {
+                paginWrap.innerHTML = '';
+                paginWrap.appendChild(
+                    createPagination(currentPage, totalPages, (page) => {
+                        currentPage = page;
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        loadContent();
+                    })
+                );
+            }
+
+        } catch (err) {
+            console.error(err);
+            grid.innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1;">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            <h3>Something went wrong</h3>
+            <p>${err.message || 'Failed to load content. Please try again.'}</p>
+            <button class="btn btn-crimson" onclick="location.reload()">Retry</button>
+          </div>`;
+            toast('Failed to load content', 'error');
+        }
+    }
+
+    /* ── Filter event listeners ─────────────────────────── */
+    document.querySelectorAll('.filter-btn[data-type]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.filter-btn[data-type]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentType  = btn.dataset.type;
+            currentPage  = 1;
+            currentGenre = '';
+            genreSel.value = '';
+            updateGenreDropdown();
+            loadContent();
+        });
+    });
+
+    genreSel.addEventListener('change', () => {
+        currentGenre = genreSel.value;
+        currentPage  = 1;
+        loadContent();
+    });
+
+    sortSel.addEventListener('change', () => {
+        currentPage = 1;
+        loadContent();
+    });
+
+    /* ── Read URL params (e.g. /browse.html?type=tv) ────── */
+    const urlParams = new URLSearchParams(location.search);
+    const typeParam = urlParams.get('type');
+    if (typeParam && ['movie','tv','all'].includes(typeParam)) {
+        currentType = typeParam;
+        document.querySelectorAll('.filter-btn[data-type]').forEach(b => {
+            b.classList.toggle('active', b.dataset.type === typeParam);
+        });
+    }
+
+    /* ── Init ───────────────────────────────────────────── */
+    await loadGenres();
+    loadContent();
+</script>
+</body>
+</html>

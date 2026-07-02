@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CineStream — Watch</title>
+    <link rel="stylesheet" href="/css/main.css" />
+    <style>
+        /* ── Player page resets ──────────────────────────────── */
+        body { background: #000; overflow: hidden; }
+
+        /* ── Layout ──────────────────────────────────────────── */
+        .watch-page {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+        }
+
+        /* ── Iframe ──────────────────────────────────────────── */
+        .player-wrap {
+            flex: 1;
+            position: relative;
+            background: #000;
+        }
+        #player-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        /* ── Top bar (back + title) ──────────────────────────── */
+        .player-topbar {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.85), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .watch-page:hover .player-topbar,
+        .player-topbar.visible { opacity: 1; pointer-events: all; }
+
+        .topbar-back {
+            width: 36px; height: 36px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            color: var(--white);
+            transition: background var(--transition);
+            flex-shrink: 0;
+        }
+        .topbar-back:hover { background: rgba(255,255,255,0.2); }
+        .topbar-title { font-size: 15px; font-weight: 600; color: var(--white); }
+        .topbar-sub   { font-size: 13px; color: var(--grey-2); margin-left: auto; }
+
+        /* ── Bottom control bar ──────────────────────────────── */
+        .player-controls {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .watch-page:hover .player-controls,
+        .player-controls.visible { opacity: 1; pointer-events: all; }
+
+        .ctrl-btn {
+            width: 38px; height: 38px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%;
+            color: var(--white);
+            background: rgba(255,255,255,0.08);
+            transition: background var(--transition);
+            flex-shrink: 0;
+        }
+        .ctrl-btn:hover { background: rgba(255,255,255,0.18); }
+        .ctrl-btn svg  { width: 20px; height: 20px; }
+        .ctrl-btn.active { color: var(--crimson); }
+
+        .ctrl-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--grey-2);
+            white-space: nowrap;
+            padding: 0 4px;
+        }
+        .ctrl-sep { flex: 1; }
+
+        /* Server switcher pill */
+        .server-pills {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .server-pill {
+            padding: 5px 12px;
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--grey-2);
+            background: rgba(255,255,255,0.08);
+            border: 1px solid transparent;
+            transition: all var(--transition);
+        }
+        .server-pill.active {
+            background: var(--crimson);
+            color: var(--white);
+            border-color: var(--crimson);
+        }
+        .server-pill:hover:not(.active) {
+            background: rgba(255,255,255,0.15);
+            color: var(--white);
+        }
+
+        /* ── Side Panel (Episodes / Settings) ───────────────── */
+        .side-panel {
+            width: 0;
+            height: 100vh;
+            background: rgba(15,15,15,0.97);
+            border-left: 1px solid var(--grey-4);
+            overflow: hidden;
+            transition: width 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            backdrop-filter: blur(12px);
+        }
+        .side-panel.open { width: 380px; }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--grey-4);
+            flex-shrink: 0;
+        }
+        .panel-header h3 { font-size: 16px; font-weight: 700; }
+        .panel-close {
+            width: 30px; height: 30px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%;
+            color: var(--grey-2);
+            transition: all var(--transition);
+        }
+        .panel-close:hover { background: var(--grey-4); color: var(--white); }
+
+        .panel-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        /* Episodes panel */
+        .panel-season-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .panel-season-select {
+            padding: 7px 12px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--grey-4);
+            border-radius: var(--radius-sm);
+            color: var(--white);
+            font-size: 13px;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+        }
+        .panel-ep-search {
+            flex: 1;
+            padding: 7px 12px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--grey-4);
+            border-radius: var(--radius-sm);
+            color: var(--white);
+            font-size: 13px;
+            outline: none;
+        }
+        .panel-ep-search:focus { border-color: var(--grey-3); }
+
+        .panel-ep-item {
+            display: flex;
+            gap: 12px;
+            padding: 10px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: background var(--transition);
+            position: relative;
+        }
+        .panel-ep-item:hover { background: var(--bg-elevated); }
+        .panel-ep-item.watching { background: rgba(229,9,20,0.1); border: 1px solid rgba(229,9,20,0.3); }
+
+        .panel-ep-thumb {
+            width: 110px;
+            aspect-ratio: 16/9;
+            object-fit: cover;
+            border-radius: var(--radius-sm);
+            background: var(--bg-elevated);
+            flex-shrink: 0;
+        }
+        .watching-badge {
+            position: absolute;
+            top: 14px; left: 14px;
+            background: var(--crimson);
+            color: var(--white);
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .panel-ep-info { flex: 1; min-width: 0; }
+        .panel-ep-num  { font-size: 11px; color: var(--grey-3); margin-bottom: 3px; }
+        .panel-ep-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+        .panel-ep-desc  { font-size: 12px; color: var(--grey-2); line-height: 1.4;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+        /* Settings panel */
+        .settings-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--grey-4);
+            margin-bottom: 16px;
+            gap: 0;
+        }
+        .settings-tab {
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--grey-2);
+            position: relative;
+            transition: color var(--transition);
+            white-space: nowrap;
+        }
+        .settings-tab.active { color: var(--white); }
+        .settings-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; left: 0; right: 0;
+            height: 2px;
+            background: var(--crimson);
+        }
+        .settings-tab:hover { color: var(--white); }
+
+        .settings-panel-body { display: none; }
+        .settings-panel-body.active { display: block; }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 13px 14px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: background var(--transition);
+        }
+        .setting-item:hover { background: var(--bg-elevated); }
+        .setting-item.active {
+            background: rgba(229,9,20,0.12);
+            border: 1px solid rgba(229,9,20,0.3);
+        }
+        .setting-item-left  { display: flex; flex-direction: column; gap: 2px; }
+        .setting-item-label { font-size: 14px; font-weight: 600; }
+        .setting-item-sub   { font-size: 12px; color: var(--grey-3); }
+        .setting-item-badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 50px;
+            background: var(--grey-4);
+            color: var(--grey-1);
+        }
+        .setting-item.active .setting-item-badge {
+            background: var(--crimson);
+            color: var(--white);
+        }
+
+        /* Speed options */
+        .speed-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .speed-btn {
+            padding: 10px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--grey-2);
+            background: var(--bg-elevated);
+            border: 1px solid var(--grey-4);
+            text-align: center;
+            transition: all var(--transition);
+        }
+        .speed-btn.active {
+            background: var(--crimson);
+            border-color: var(--crimson);
+            color: var(--white);
+        }
+        .speed-btn:hover:not(.active) { background: var(--grey-4); color: var(--white); }
+
+        /* ── Loading overlay (while iframe loads) ────────────── */
+        .player-loader {
+            position: absolute;
+            inset: 0;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            z-index: 5;
+            transition: opacity 0.5s ease;
+        }
+        .player-loader.hidden { opacity: 0; pointer-events: none; }
+        .player-loader-title { font-size: 18px; font-weight: 700; }
+        .player-loader-sub   { font-size: 14px; color: var(--grey-2); }
+
+        /* ── Responsive ──────────────────────────────────────── */
+        @media (max-width: 768px) {
+            .side-panel.open { width: 100vw; position: fixed; right: 0; top: 0; z-index: 100; }
+            .topbar-sub { display: none; }
+            .server-pills { display: none; }
+            .ctrl-label { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="watch-page" id="watch-page">
+
+    <!-- Player -->
+    <div class="player-wrap" id="player-wrap">
+
+        <!-- Loading overlay -->
+        <div class="player-loader" id="player-loader">
+            <div class="spinner" style="width:48px;height:48px;border-width:4px;"></div>
+            <div class="player-loader-title" id="loader-title">Loading...</div>
+            <div class="player-loader-sub" id="loader-sub">Connecting to server</div>
+        </div>
+
+        <!-- Top bar -->
+        <div class="player-topbar" id="player-topbar">
+            <a href="#" id="back-btn" class="topbar-back" title="Go back">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </a>
+            <div>
+                <div class="topbar-title" id="topbar-title">Loading...</div>
+                <div style="font-size:12px;color:var(--grey-2);" id="topbar-sub"></div>
+            </div>
+            <div class="topbar-sub" id="server-pills-top"></div>
+        </div>
+
+        <!-- Iframe -->
+        <iframe id="player-iframe" allowfullscreen allow="autoplay; fullscreen; picture-in-picture"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+
+        <!-- Bottom controls -->
+        <div class="player-controls" id="player-controls">
+
+            <!-- Left controls -->
+            <a href="#" id="ctrl-back" class="ctrl-btn" title="Back">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </a>
+
+            <div class="ctrl-sep"></div>
+
+            <!-- Server switcher -->
+            <div class="server-pills" id="server-pills"></div>
+
+            <!-- Right controls -->
+            <button class="ctrl-btn" id="ctrl-episodes" title="Episodes" style="display:none;">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>
+            </button>
+            <span class="ctrl-label" id="ctrl-episodes-label" style="display:none;">Episodes</span>
+
+            <button class="ctrl-btn" id="ctrl-settings" title="Settings">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+            </button>
+            <span class="ctrl-label">Settings</span>
+
+        </div>
+    </div>
+
+    <!-- ── Side Panel ──────────────────────────────────────── -->
+    <div class="side-panel" id="side-panel">
+
+        <!-- Episodes panel content -->
+        <div id="panel-episodes-content" style="display:none;flex-direction:column;height:100%;">
+            <div class="panel-header">
+                <h3>Episodes</h3>
+                <button class="panel-close" id="panel-close-btn">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+            <div class="panel-body">
+                <div class="panel-season-row">
+                    <select class="panel-season-select" id="panel-season-select"></select>
+                    <input type="text" class="panel-ep-search" id="panel-ep-search" placeholder="Search..." />
+                </div>
+                <div id="panel-ep-list"></div>
+            </div>
+        </div>
+
+        <!-- Settings panel content -->
+        <div id="panel-settings-content" style="display:none;flex-direction:column;height:100%;">
+            <div class="panel-header">
+                <div>
+                    <h3>Player Settings</h3>
+                    <div style="font-size:12px;color:var(--grey-2);margin-top:2px;">Customize your viewing experience</div>
+                </div>
+                <button class="panel-close" id="settings-close-btn">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+            <div class="panel-body">
+                <!-- Tabs -->
+                <div class="settings-tabs">
+                    <button class="settings-tab active" data-tab="servers">Servers</button>
+                    <button class="settings-tab" data-tab="quality">Quality</button>
+                    <button class="settings-tab" data-tab="speed">Speed</button>
+                </div>
+
+                <!-- Servers tab -->
+                <div class="settings-panel-body active" id="stab-servers">
+                    <div id="settings-servers-list"></div>
+                </div>
+
+                <!-- Quality tab (informational — VidSrc controls this) -->
+                <div class="settings-panel-body" id="stab-quality">
+                    <p style="font-size:13px;color:var(--grey-2);margin-bottom:16px;">
+                        Quality is managed by the streaming server. Switch servers if you want different quality options.
+                    </p>
+                    <div class="setting-item active">
+                        <div class="setting-item-left">
+                            <span class="setting-item-label">Auto</span>
+                            <span class="setting-item-sub">Best available quality</span>
+                        </div>
+                        <span class="setting-item-badge">Active</span>
+                    </div>
+                </div>
+
+                <!-- Speed tab -->
+                <div class="settings-panel-body" id="stab-speed">
+                    <p style="font-size:13px;color:var(--grey-2);margin-bottom:16px;">
+                        Playback speed is controlled by the embedded player. Use the player's own speed controls.
+                    </p>
+                    <div class="speed-grid">
+                        ${['0.5x','0.75x','Normal','1.25x','1.5x','2x'].map((s,i) =>
+                        `<button class="speed-btn ${i===2?'active':''}">${s}</button>`
+                        ).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script type="module">
+    import { tmdb, streamApi } from '/js/api.js';
+    import '/js/auth.js';
+
+    /* ── URL params ─────────────────────────────────────────── */
+    const p         = new URLSearchParams(location.search);
+    const id        = p.get('id');
+    const mediaType = p.get('type') || 'movie';
+    const season    = p.get('season')  ? +p.get('season')  : 1;
+    const episode   = p.get('episode') ? +p.get('episode') : 1;
+
+    if (!id) location.href = '/';
+
+    /* ── State ──────────────────────────────────────────────── */
+    let sources       = [];
+    let currentSource = 0;
+    let allSeasons    = [];
+    let currentSeason = season;
+    let currentEp     = episode;
+    let panelMode     = null; // 'episodes' | 'settings' | null
+    let mediaData     = null;
+
+    /* ── Elements ───────────────────────────────────────────── */
+    const iframe          = document.getElementById('player-iframe');
+    const loader          = document.getElementById('player-loader');
+    const loaderTitle     = document.getElementById('loader-title');
+    const loaderSub       = document.getElementById('loader-sub');
+    const topbarTitle     = document.getElementById('topbar-title');
+    const topbarSub       = document.getElementById('topbar-sub');
+    const serverPills     = document.getElementById('server-pills');
+    const sidePanel       = document.getElementById('side-panel');
+    const epContent       = document.getElementById('panel-episodes-content');
+    const settingsContent = document.getElementById('panel-settings-content');
+    const ctrlEpisodes    = document.getElementById('ctrl-episodes');
+    const ctrlEpLabel     = document.getElementById('ctrl-episodes-label');
+
+    /* ── Back navigation ────────────────────────────────────── */
+    const backHref = `/detail.html?id=${id}&type=${mediaType}`;
+    document.getElementById('back-btn').href  = backHref;
+    document.getElementById('ctrl-back').href = backHref;
+
+    /* ── Load media info + stream sources ──────────────────── */
+    async function init() {
+        try {
+            const [data, stream] = await Promise.all([
+                mediaType === 'tv' ? tmdb.tv(id) : tmdb.movie(id),
+                mediaType === 'tv'
+                    ? streamApi.tv(id, season, episode)
+                    : streamApi.movie(id),
+            ]);
+
+            mediaData = data;
+            sources   = stream.sources || [];
+
+            const title = data.title || data.name || '';
+            document.title = `${title} — CineStream`;
+            loaderTitle.textContent  = title;
+            topbarTitle.textContent  = title;
+
+            if (mediaType === 'tv') {
+                const epLabel = `Season ${season} · Episode ${episode}`;
+                loaderSub.textContent  = epLabel;
+                topbarSub.textContent  = epLabel;
+                ctrlEpisodes.style.display  = 'flex';
+                ctrlEpLabel.style.display   = 'inline';
+
+                // Load seasons for panel
+                allSeasons = (data.seasons || []).filter(s => s.season_number > 0);
+                buildSeasonSelect();
+                loadPanelEpisodes(season);
+            } else {
+                loaderSub.textContent = (data.release_date || '').slice(0,4);
+            }
+
+            if (!sources.length) {
+                loaderTitle.textContent = 'No playable video found';
+                loaderSub.textContent = 'Add a licensed stream provider or try another title.';
+                buildServerPills();
+                buildSettingsServers();
+                return;
+            }
+
+            buildServerPills();
+            buildSettingsServers();
+            loadSource(0);
+
+        } catch (err) {
+            loaderTitle.textContent = 'Failed to load';
+            loaderSub.textContent   = err.message || 'Please try again';
+            console.error(err);
+        }
+    }
+
+    /* ── Load a stream source into the iframe ───────────────── */
+    function loadSource(index) {
+        if (!sources[index]) return;
+        currentSource = index;
+        const src = sources[index].embedUrl;
+        iframe.src = src;
+
+        // Update pill active state
+        document.querySelectorAll('.server-pill').forEach((p, i) =>
+            p.classList.toggle('active', i === index));
+        document.querySelectorAll('.settings-server-item').forEach((p, i) =>
+            p.classList.toggle('active', i === index));
+
+        // Hide loader after short delay (iframe takes a moment)
+        setTimeout(() => loader.classList.add('hidden'), 2000);
+    }
+
+    /* ── Server pills (bottom bar) ──────────────────────────── */
+    function buildServerPills() {
+        serverPills.innerHTML = sources.map((s, i) => `
+      <button class="server-pill ${i === 0 ? 'active' : ''}" data-i="${i}">
+        ${s.provider}
+      </button>`).join('');
+        serverPills.querySelectorAll('.server-pill').forEach(btn =>
+            btn.addEventListener('click', () => loadSource(+btn.dataset.i)));
+    }
+
+    /* ── Settings — Servers tab ─────────────────────────────── */
+    function buildSettingsServers() {
+        const list = document.getElementById('settings-servers-list');
+        list.innerHTML = sources.map((s, i) => `
+      <div class="setting-item settings-server-item ${i === 0 ? 'active' : ''}" data-i="${i}">
+        <div class="setting-item-left">
+          <span class="setting-item-label">${s.provider}</span>
+          <span class="setting-item-sub">${s.quality || 'HD'}</span>
+        </div>
+        <span class="setting-item-badge">${i === 0 ? 'Active' : 'Switch'}</span>
+      </div>`).join('');
+        list.querySelectorAll('.settings-server-item').forEach(item =>
+            item.addEventListener('click', () => {
+                loadSource(+item.dataset.i);
+                // Update badges
+                list.querySelectorAll('.settings-server-item').forEach((el, i) => {
+                    el.classList.toggle('active', i === +item.dataset.i);
+                    el.querySelector('.setting-item-badge').textContent = i === +item.dataset.i ? 'Active' : 'Switch';
+                });
+            }));
+    }
+
+    /* ── Panel open/close ───────────────────────────────────── */
+    function openPanel(mode) {
+        if (panelMode === mode) { closePanel(); return; }
+        panelMode = mode;
+        sidePanel.classList.add('open');
+        epContent.style.display       = mode === 'episodes' ? 'flex' : 'none';
+        settingsContent.style.display = mode === 'settings' ? 'flex' : 'none';
+        ctrlEpisodes.classList.toggle('active', mode === 'episodes');
+        document.getElementById('ctrl-settings').classList.toggle('active', mode === 'settings');
+    }
+
+    function closePanel() {
+        panelMode = null;
+        sidePanel.classList.remove('open');
+        ctrlEpisodes.classList.remove('active');
+        document.getElementById('ctrl-settings').classList.remove('active');
+    }
+
+    ctrlEpisodes.addEventListener('click', () => openPanel('episodes'));
+    document.getElementById('ctrl-settings').addEventListener('click', () => openPanel('settings'));
+    document.getElementById('panel-close-btn').addEventListener('click', closePanel);
+    document.getElementById('settings-close-btn').addEventListener('click', closePanel);
+
+    /* ── Settings tabs ──────────────────────────────────────── */
+    document.querySelectorAll('.settings-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.settings-panel-body').forEach(b => b.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById(`stab-${tab.dataset.tab}`)?.classList.add('active');
+        });
+    });
+
+    /* ── Season select (panel) ──────────────────────────────── */
+    function buildSeasonSelect() {
+        const sel = document.getElementById('panel-season-select');
+        sel.innerHTML = allSeasons.map(s =>
+            `<option value="${s.season_number}" ${s.season_number === currentSeason ? 'selected' : ''}>
+        Season ${s.season_number}
+      </option>`).join('');
+        sel.addEventListener('change', () => {
+            currentSeason = +sel.value;
+            loadPanelEpisodes(currentSeason);
+        });
+    }
+
+    /* ── Load episodes into panel ───────────────────────────── */
+    async function loadPanelEpisodes(seasonNum) {
+        const listEl = document.getElementById('panel-ep-list');
+        listEl.innerHTML = `<div style="display:flex;justify-content:center;padding:30px;"><div class="spinner"></div></div>`;
+        try {
+            const data = await tmdb.tvSeason(id, seasonNum);
+            renderPanelEpisodes(data.episodes || [], seasonNum);
+        } catch (_) {
+            listEl.innerHTML = `<p style="color:var(--grey-2);font-size:13px;">Failed to load episodes.</p>`;
+        }
+    }
+
+    function renderPanelEpisodes(eps, seasonNum) {
+        const listEl = document.getElementById('panel-ep-list');
+        if (!eps.length) { listEl.innerHTML = `<p style="color:var(--grey-2);font-size:13px;">No episodes.</p>`; return; }
+
+        listEl.innerHTML = eps.map(ep => {
+            const isWatching = seasonNum === currentSeason && ep.episode_number === currentEp;
+            const thumb = ep.still_path ? `https://image.tmdb.org/t/p/w300${ep.still_path}` : '';
+            return `
+        <div class="panel-ep-item ${isWatching ? 'watching' : ''}"
+             data-season="${seasonNum}" data-ep="${ep.episode_number}">
+          ${isWatching ? '<div class="watching-badge">Watching</div>' : ''}
+          ${thumb
+                ? `<img class="panel-ep-thumb" src="${thumb}" loading="lazy" alt="Ep ${ep.episode_number}">`
+                : `<div class="panel-ep-thumb" style="background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;color:var(--grey-3);font-size:22px;">▶</div>`}
+          <div class="panel-ep-info">
+            <div class="panel-ep-num">${seasonNum}. Episode ${ep.episode_number}</div>
+            <div class="panel-ep-title">${ep.name || `Episode ${ep.episode_number}`}</div>
+            <div class="panel-ep-desc">${ep.overview || ''}</div>
+          </div>
+        </div>`;
+        }).join('');
+
+        // Scroll to watching
+        listEl.querySelector('.watching')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        // Click → navigate
+        listEl.querySelectorAll('.panel-ep-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const s = item.dataset.season;
+                const e = item.dataset.ep;
+                location.href = `/watch.html?id=${id}&type=tv&season=${s}&episode=${e}`;
+            });
+        });
+    }
+
+    /* ── Episode search (panel) ─────────────────────────────── */
+    document.getElementById('panel-ep-search')?.addEventListener('input', async (ev) => {
+        const q = ev.target.value.trim().toLowerCase();
+        if (!q) { loadPanelEpisodes(currentSeason); return; }
+        // Filter from current rendered items
+        document.querySelectorAll('.panel-ep-item').forEach(item => {
+            const text = item.textContent.toLowerCase();
+            item.style.display = text.includes(q) ? 'flex' : 'none';
+        });
+    });
+
+    /* ── Keyboard shortcuts ─────────────────────────────────── */
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closePanel();
+        if (e.key === 'Backspace' && !['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) {
+            location.href = backHref;
+        }
+    });
+
+    /* ── Show controls on mouse move ───────────────────────── */
+    let hideTimer;
+    document.getElementById('watch-page').addEventListener('mousemove', () => {
+        document.getElementById('player-topbar').classList.add('visible');
+        document.getElementById('player-controls').classList.add('visible');
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+            if (!panelMode) {
+                document.getElementById('player-topbar').classList.remove('visible');
+                document.getElementById('player-controls').classList.remove('visible');
+            }
+        }, 3000);
+    });
+
+    init();
+</script>
+</body>
+</html>
