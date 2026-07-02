@@ -3,7 +3,11 @@
 A full-stack movie and TV streaming platform built with **Kotlin + Ktor** on the backend and **vanilla HTML/JS** on the frontend. Fetches metadata from TMDB, proxies it server-side to keep API keys hidden, and streams video via VidSrc embeds.
 
 ---
-
+![Screenshot 2026-06-29 182511.png](project%20pics/Screenshot%202026-06-29%20182511.png)
+![Screenshot 2026-06-29 182747.png](project%20pics/Screenshot%202026-06-29%20182747.png)
+![Screenshot 2026-07-02 132520.png](project%20pics/Screenshot%202026-07-02%20132520.png)
+![Screenshot 2026-07-02 132546.png](project%20pics/Screenshot%202026-07-02%20132546.png)
+![Screenshot 2026-07-02 132617.png](project%20pics/Screenshot%202026-07-02%20132617.png)
 ## ✨ Features
 
 - 🔐 JWT authentication (register, login, protected routes)
