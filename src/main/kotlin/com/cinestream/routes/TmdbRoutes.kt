@@ -49,7 +49,7 @@ fun Route.tmdbRoutes() {
         }
         get("/movie/{id}") {
             val id = call.parameters["id"]!!
-            proxyTmdb(call, tmdbUrl("/movie/$id", "append_to_response" to "credits,videos")) { tmdbAuth() }
+            proxyTmdb(call, tmdbUrl("/movie/$id", "append_to_response" to "credits,videos,external_ids")) { tmdbAuth() }
         }
         get("/movie/{id}/similar") {
             val id   = call.parameters["id"]!!
@@ -67,7 +67,7 @@ fun Route.tmdbRoutes() {
         }
         get("/tv/{id}") {
             val id = call.parameters["id"]!!
-            proxyTmdb(call, tmdbUrl("/tv/$id", "append_to_response" to "credits,videos")) { tmdbAuth() }
+            proxyTmdb(call, tmdbUrl("/tv/$id", "append_to_response" to "credits,videos,external_ids")) { tmdbAuth() }
         }
         get("/tv/{id}/similar") {
             val id   = call.parameters["id"]!!

@@ -6,10 +6,8 @@
     <title>CineStream — Watch</title>
     <link rel="stylesheet" href="/css/main.css" />
     <style>
-        /* ── Player page resets ──────────────────────────────── */
-        body { background: #000; overflow: hidden; }
+        body { background: #000; overflow: hidden; margin: 0; }
 
-        /* ── Layout ──────────────────────────────────────────── */
         .watch-page {
             display: flex;
             height: 100vh;
@@ -17,305 +15,19 @@
             position: relative;
         }
 
-        /* ── Iframe ──────────────────────────────────────────── */
+        /* ── Player ─────────────────────────────────────────── */
         .player-wrap {
             flex: 1;
             position: relative;
             background: #000;
+            overflow: hidden;
         }
         #player-iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            display: block;
+            width: 100%; height: 100%;
+            border: none; display: block;
         }
 
-        /* ── Top bar (back + title) ──────────────────────────── */
-        .player-topbar {
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            padding: 16px 20px;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.85), transparent);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-        }
-        .watch-page:hover .player-topbar,
-        .player-topbar.visible { opacity: 1; pointer-events: all; }
-
-        .topbar-back {
-            width: 36px; height: 36px;
-            display: flex; align-items: center; justify-content: center;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.1);
-            color: var(--white);
-            transition: background var(--transition);
-            flex-shrink: 0;
-        }
-        .topbar-back:hover { background: rgba(255,255,255,0.2); }
-        .topbar-title { font-size: 15px; font-weight: 600; color: var(--white); }
-        .topbar-sub   { font-size: 13px; color: var(--grey-2); margin-left: auto; }
-
-        /* ── Bottom control bar ──────────────────────────────── */
-        .player-controls {
-            position: absolute;
-            bottom: 0; left: 0; right: 0;
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 16px;
-            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-        }
-        .watch-page:hover .player-controls,
-        .player-controls.visible { opacity: 1; pointer-events: all; }
-
-        .ctrl-btn {
-            width: 38px; height: 38px;
-            display: flex; align-items: center; justify-content: center;
-            border-radius: 50%;
-            color: var(--white);
-            background: rgba(255,255,255,0.08);
-            transition: background var(--transition);
-            flex-shrink: 0;
-        }
-        .ctrl-btn:hover { background: rgba(255,255,255,0.18); }
-        .ctrl-btn svg  { width: 20px; height: 20px; }
-        .ctrl-btn.active { color: var(--crimson); }
-
-        .ctrl-label {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--grey-2);
-            white-space: nowrap;
-            padding: 0 4px;
-        }
-        .ctrl-sep { flex: 1; }
-
-        /* Server switcher pill */
-        .server-pills {
-            display: flex;
-            gap: 6px;
-            align-items: center;
-        }
-        .server-pill {
-            padding: 5px 12px;
-            border-radius: 50px;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--grey-2);
-            background: rgba(255,255,255,0.08);
-            border: 1px solid transparent;
-            transition: all var(--transition);
-        }
-        .server-pill.active {
-            background: var(--crimson);
-            color: var(--white);
-            border-color: var(--crimson);
-        }
-        .server-pill:hover:not(.active) {
-            background: rgba(255,255,255,0.15);
-            color: var(--white);
-        }
-
-        /* ── Side Panel (Episodes / Settings) ───────────────── */
-        .side-panel {
-            width: 0;
-            height: 100vh;
-            background: rgba(15,15,15,0.97);
-            border-left: 1px solid var(--grey-4);
-            overflow: hidden;
-            transition: width 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
-            backdrop-filter: blur(12px);
-        }
-        .side-panel.open { width: 380px; }
-
-        .panel-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--grey-4);
-            flex-shrink: 0;
-        }
-        .panel-header h3 { font-size: 16px; font-weight: 700; }
-        .panel-close {
-            width: 30px; height: 30px;
-            display: flex; align-items: center; justify-content: center;
-            border-radius: 50%;
-            color: var(--grey-2);
-            transition: all var(--transition);
-        }
-        .panel-close:hover { background: var(--grey-4); color: var(--white); }
-
-        .panel-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
-        }
-
-        /* Episodes panel */
-        .panel-season-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 14px;
-        }
-        .panel-season-select {
-            padding: 7px 12px;
-            background: var(--bg-elevated);
-            border: 1px solid var(--grey-4);
-            border-radius: var(--radius-sm);
-            color: var(--white);
-            font-size: 13px;
-            font-weight: 600;
-            outline: none;
-            cursor: pointer;
-        }
-        .panel-ep-search {
-            flex: 1;
-            padding: 7px 12px;
-            background: var(--bg-elevated);
-            border: 1px solid var(--grey-4);
-            border-radius: var(--radius-sm);
-            color: var(--white);
-            font-size: 13px;
-            outline: none;
-        }
-        .panel-ep-search:focus { border-color: var(--grey-3); }
-
-        .panel-ep-item {
-            display: flex;
-            gap: 12px;
-            padding: 10px;
-            border-radius: var(--radius-md);
-            cursor: pointer;
-            transition: background var(--transition);
-            position: relative;
-        }
-        .panel-ep-item:hover { background: var(--bg-elevated); }
-        .panel-ep-item.watching { background: rgba(229,9,20,0.1); border: 1px solid rgba(229,9,20,0.3); }
-
-        .panel-ep-thumb {
-            width: 110px;
-            aspect-ratio: 16/9;
-            object-fit: cover;
-            border-radius: var(--radius-sm);
-            background: var(--bg-elevated);
-            flex-shrink: 0;
-        }
-        .watching-badge {
-            position: absolute;
-            top: 14px; left: 14px;
-            background: var(--crimson);
-            color: var(--white);
-            font-size: 10px;
-            font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 3px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .panel-ep-info { flex: 1; min-width: 0; }
-        .panel-ep-num  { font-size: 11px; color: var(--grey-3); margin-bottom: 3px; }
-        .panel-ep-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
-        .panel-ep-desc  { font-size: 12px; color: var(--grey-2); line-height: 1.4;
-            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-
-        /* Settings panel */
-        .settings-tabs {
-            display: flex;
-            border-bottom: 1px solid var(--grey-4);
-            margin-bottom: 16px;
-            gap: 0;
-        }
-        .settings-tab {
-            padding: 8px 14px;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--grey-2);
-            position: relative;
-            transition: color var(--transition);
-            white-space: nowrap;
-        }
-        .settings-tab.active { color: var(--white); }
-        .settings-tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -1px; left: 0; right: 0;
-            height: 2px;
-            background: var(--crimson);
-        }
-        .settings-tab:hover { color: var(--white); }
-
-        .settings-panel-body { display: none; }
-        .settings-panel-body.active { display: block; }
-
-        .setting-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 13px 14px;
-            border-radius: var(--radius-md);
-            cursor: pointer;
-            transition: background var(--transition);
-        }
-        .setting-item:hover { background: var(--bg-elevated); }
-        .setting-item.active {
-            background: rgba(229,9,20,0.12);
-            border: 1px solid rgba(229,9,20,0.3);
-        }
-        .setting-item-left  { display: flex; flex-direction: column; gap: 2px; }
-        .setting-item-label { font-size: 14px; font-weight: 600; }
-        .setting-item-sub   { font-size: 12px; color: var(--grey-3); }
-        .setting-item-badge {
-            font-size: 11px;
-            font-weight: 700;
-            padding: 2px 8px;
-            border-radius: 50px;
-            background: var(--grey-4);
-            color: var(--grey-1);
-        }
-        .setting-item.active .setting-item-badge {
-            background: var(--crimson);
-            color: var(--white);
-        }
-
-        /* Speed options */
-        .speed-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-        }
-        .speed-btn {
-            padding: 10px;
-            border-radius: var(--radius-sm);
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--grey-2);
-            background: var(--bg-elevated);
-            border: 1px solid var(--grey-4);
-            text-align: center;
-            transition: all var(--transition);
-        }
-        .speed-btn.active {
-            background: var(--crimson);
-            border-color: var(--crimson);
-            color: var(--white);
-        }
-        .speed-btn:hover:not(.active) { background: var(--grey-4); color: var(--white); }
-
-        /* ── Loading overlay (while iframe loads) ────────────── */
+        /* ── Loading overlay ─────────────────────────────────── */
         .player-loader {
             position: absolute;
             inset: 0;
@@ -324,20 +36,331 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 20px;
+            gap: 16px;
             z-index: 5;
             transition: opacity 0.5s ease;
         }
         .player-loader.hidden { opacity: 0; pointer-events: none; }
-        .player-loader-title { font-size: 18px; font-weight: 700; }
-        .player-loader-sub   { font-size: 14px; color: var(--grey-2); }
+        .loader-title { font-size: 20px; font-weight: 700; color: #fff; }
+        .loader-sub   { font-size: 14px; color: var(--grey-2); }
+
+        /* ── Top-left bar (back + title) ─────────────────────── */
+        .player-topbar {
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 20px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .player-topbar.visible { opacity: 1; pointer-events: all; }
+
+        .topbar-back {
+            width: 36px; height: 36px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+        .topbar-back:hover { background: rgba(255,255,255,0.25); }
+        .topbar-info { display: flex; flex-direction: column; gap: 2px; }
+        .topbar-title { font-size: 15px; font-weight: 700; color: #fff; }
+        .topbar-sub   { font-size: 12px; color: var(--grey-2); }
+
+        /* ── Top-right controls ──────────────────────────────── */
+        .player-controls {
+            position: absolute;
+            top: 0; right: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 16px 20px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .player-controls.visible { opacity: 1; pointer-events: all; }
+
+        .ctrl-btn {
+            width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%;
+            color: #fff;
+            background: rgba(255,255,255,0.1);
+            transition: background 0.2s;
+            flex-shrink: 0;
+            border: none;
+            cursor: pointer;
+        }
+        .ctrl-btn:hover  { background: rgba(255,255,255,0.22); }
+        .ctrl-btn.active { background: var(--crimson); }
+        .ctrl-btn svg    { width: 20px; height: 20px; }
+
+        /* ── Side Panel ──────────────────────────────────────── */
+        .side-panel {
+            width: 0;
+            height: 100vh;
+            background: rgba(12,12,12,0.98);
+            border-left: 1px solid var(--grey-4);
+            overflow: hidden;
+            transition: width 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            backdrop-filter: blur(16px);
+            z-index: 20;
+        }
+        .side-panel.open { width: 400px; }
+
+        .panel-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            padding: 20px 20px 16px;
+            border-bottom: 1px solid var(--grey-4);
+            flex-shrink: 0;
+        }
+        .panel-header-left h3   { font-size: 17px; font-weight: 700; margin-bottom: 3px; color: #fff; }
+        .panel-header-left span { font-size: 12px; color: var(--grey-2); }
+        .panel-close {
+            width: 30px; height: 30px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%;
+            color: var(--grey-2);
+            transition: all 0.2s;
+            flex-shrink: 0;
+            border: none;
+            background: none;
+            cursor: pointer;
+        }
+        .panel-close:hover { background: var(--grey-4); color: #fff; }
+
+        .panel-tabs {
+            display: flex;
+            padding: 0 12px;
+            border-bottom: 1px solid var(--grey-4);
+            flex-shrink: 0;
+            overflow-x: auto;
+        }
+        .panel-tabs::-webkit-scrollbar { display: none; }
+        .panel-tab {
+            padding: 12px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--grey-2);
+            position: relative;
+            transition: color 0.2s;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            border: none;
+            background: none;
+            cursor: pointer;
+        }
+        .panel-tab svg { width: 14px; height: 14px; }
+        .panel-tab.active { color: #fff; }
+        .panel-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; left: 0; right: 0;
+            height: 2px;
+            background: var(--crimson);
+            border-radius: 1px 1px 0 0;
+        }
+        .panel-tab:hover { color: #fff; }
+
+        .panel-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 20px;
+        }
+
+        /* ── Quality items ───────────────────────────────────── */
+        .quality-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: background 0.2s;
+            border: 1px solid transparent;
+            margin-bottom: 6px;
+        }
+        .quality-item:hover { background: var(--bg-elevated); }
+        .quality-item.active {
+            background: rgba(229,9,20,0.1);
+            border-color: rgba(229,9,20,0.35);
+        }
+        .quality-label { font-size: 15px; font-weight: 600; color: #fff; }
+        .quality-badge {
+            font-size: 11px; font-weight: 700;
+            padding: 3px 9px; border-radius: 50px;
+            background: var(--grey-4); color: var(--grey-1);
+            letter-spacing: 0.5px;
+        }
+        .quality-item.active .quality-badge { background: var(--crimson); color: #fff; }
+
+        /* ── Subtitle items ──────────────────────────────────── */
+        .subtitle-search {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--grey-4);
+            border-radius: var(--radius-sm);
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            margin-bottom: 12px;
+            box-sizing: border-box;
+        }
+        .subtitle-search:focus { border-color: var(--grey-3); }
+        .subtitle-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 11px 16px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: background 0.2s;
+            border: 1px solid transparent;
+            margin-bottom: 4px;
+        }
+        .subtitle-item:hover { background: var(--bg-elevated); }
+        .subtitle-item.active {
+            background: rgba(229,9,20,0.1);
+            border-color: rgba(229,9,20,0.35);
+        }
+        .subtitle-label { font-size: 14px; font-weight: 500; color: #fff; }
+        .subtitle-check {
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            border: 2px solid var(--grey-3);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .subtitle-item.active .subtitle-check {
+            background: var(--crimson);
+            border-color: var(--crimson);
+        }
+        .subtitle-item.active .subtitle-check::after {
+            content: '';
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #fff;
+        }
+
+        /* ── Server items ────────────────────────────────────── */
+        .server-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 13px 16px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: background 0.2s;
+            border: 1px solid transparent;
+            margin-bottom: 6px;
+        }
+        .server-item:hover { background: var(--bg-elevated); }
+        .server-item.active {
+            background: rgba(229,9,20,0.1);
+            border-color: rgba(229,9,20,0.35);
+        }
+        .server-item-left { display: flex; flex-direction: column; gap: 2px; }
+        .server-name  { font-size: 14px; font-weight: 600; color: #fff; }
+        .server-qual  { font-size: 12px; color: var(--grey-3); }
+        .server-badge {
+            font-size: 11px; font-weight: 700;
+            padding: 3px 10px; border-radius: 50px;
+            background: var(--grey-4); color: var(--grey-1);
+        }
+        .server-item.active .server-badge { background: var(--crimson); color: #fff; }
+
+        /* ── Episodes panel ──────────────────────────────────── */
+        .ep-controls { display: flex; gap: 10px; margin-bottom: 14px; }
+        .ep-season-sel {
+            padding: 8px 12px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--grey-4);
+            border-radius: var(--radius-sm);
+            color: #fff; font-size: 13px; font-weight: 600;
+            outline: none; cursor: pointer;
+        }
+        .ep-search {
+            flex: 1;
+            padding: 8px 12px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--grey-4);
+            border-radius: var(--radius-sm);
+            color: #fff; font-size: 13px;
+            outline: none;
+        }
+        .ep-search:focus { border-color: var(--grey-3); }
+
+        .ep-item {
+            display: flex; gap: 12px; padding: 10px;
+            border-radius: var(--radius-md);
+            cursor: pointer; transition: background 0.2s;
+            position: relative; border: 1px solid transparent;
+            margin-bottom: 4px;
+        }
+        .ep-item:hover { background: var(--bg-elevated); }
+        .ep-item.watching {
+            background: rgba(229,9,20,0.08);
+            border-color: rgba(229,9,20,0.25);
+        }
+        .ep-thumb {
+            width: 110px; aspect-ratio: 16/9;
+            object-fit: cover; border-radius: var(--radius-sm);
+            background: var(--bg-elevated); flex-shrink: 0;
+        }
+        .ep-watch-badge {
+            position: absolute; top: 14px; left: 14px;
+            background: var(--crimson); color: #fff;
+            font-size: 10px; font-weight: 700;
+            padding: 2px 6px; border-radius: 3px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .ep-info { flex: 1; min-width: 0; }
+        .ep-num   { font-size: 11px; color: var(--grey-3); margin-bottom: 3px; }
+        .ep-title { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 3px; }
+        .ep-desc  {
+            font-size: 12px; color: var(--grey-2); line-height: 1.4;
+            display: -webkit-box; -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical; overflow: hidden;
+        }
+
+        /* ── Speed grid ──────────────────────────────────────── */
+        .speed-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .speed-btn {
+            padding: 11px; border-radius: 8px;
+            font-size: 13px; font-weight: 600;
+            border: 1px solid var(--grey-4);
+            background: var(--bg-elevated);
+            color: var(--grey-2);
+            cursor: pointer; transition: all 0.2s;
+        }
+        .speed-btn:hover  { background: var(--grey-4); color: #fff; }
+        .speed-btn.active { background: var(--crimson); border-color: var(--crimson); color: #fff; }
 
         /* ── Responsive ──────────────────────────────────────── */
         @media (max-width: 768px) {
             .side-panel.open { width: 100vw; position: fixed; right: 0; top: 0; z-index: 100; }
-            .topbar-sub { display: none; }
-            .server-pills { display: none; }
-            .ctrl-label { display: none; }
         }
     </style>
 </head>
@@ -345,389 +368,433 @@
 
 <div class="watch-page" id="watch-page">
 
-    <!-- Player -->
+    <!-- ── Player wrap ───────────────────────────────────── -->
     <div class="player-wrap" id="player-wrap">
 
         <!-- Loading overlay -->
         <div class="player-loader" id="player-loader">
             <div class="spinner" style="width:48px;height:48px;border-width:4px;"></div>
-            <div class="player-loader-title" id="loader-title">Loading...</div>
-            <div class="player-loader-sub" id="loader-sub">Connecting to server</div>
+            <div class="loader-title" id="loader-title">Loading...</div>
+            <div class="loader-sub"   id="loader-sub">Connecting to server</div>
         </div>
 
-        <!-- Top bar -->
+        <!-- Top-left: back + title -->
         <div class="player-topbar" id="player-topbar">
-            <a href="#" id="back-btn" class="topbar-back" title="Go back">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            <a href="#" id="back-btn" class="topbar-back" title="Back">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                </svg>
             </a>
-            <div>
+            <div class="topbar-info">
                 <div class="topbar-title" id="topbar-title">Loading...</div>
-                <div style="font-size:12px;color:var(--grey-2);" id="topbar-sub"></div>
+                <div class="topbar-sub"   id="topbar-sub"></div>
             </div>
-            <div class="topbar-sub" id="server-pills-top"></div>
         </div>
 
         <!-- Iframe -->
-        <iframe id="player-iframe" allowfullscreen allow="autoplay; fullscreen; picture-in-picture"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+        <iframe id="player-iframe"
+                allowfullscreen
+                allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+                referrerpolicy="no-referrer">
+        </iframe>
 
-        <!-- Bottom controls -->
+        <!-- Top-right: controls -->
         <div class="player-controls" id="player-controls">
 
-            <!-- Left controls -->
-            <a href="#" id="ctrl-back" class="ctrl-btn" title="Back">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-            </a>
-
-            <div class="ctrl-sep"></div>
-
-            <!-- Server switcher -->
-            <div class="server-pills" id="server-pills"></div>
-
-            <!-- Right controls -->
+            <!-- Episodes (TV only, hidden by default) -->
             <button class="ctrl-btn" id="ctrl-episodes" title="Episodes" style="display:none;">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/>
+                </svg>
             </button>
-            <span class="ctrl-label" id="ctrl-episodes-label" style="display:none;">Episodes</span>
 
+            <!-- Subtitles shortcut -->
+            <button class="ctrl-btn" id="ctrl-subtitles" title="Subtitles">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-7 7H5v-2h8v2zm-2 4H5v-2h6v2zm9-4h-4v-2h4v2zm0 4h-4v-2h4v2z"/>
+                </svg>
+            </button>
+
+            <!-- Settings -->
             <button class="ctrl-btn" id="ctrl-settings" title="Settings">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+                </svg>
             </button>
-            <span class="ctrl-label">Settings</span>
 
+            <!-- Fullscreen -->
+            <button class="ctrl-btn" id="ctrl-fullscreen" title="Fullscreen (F)">
+                <svg id="fs-expand" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+                </svg>
+                <svg id="fs-collapse" viewBox="0 0 24 24" fill="currentColor" style="display:none;">
+                    <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>
+                </svg>
+            </button>
         </div>
-    </div>
 
-    <!-- ── Side Panel ──────────────────────────────────────── -->
+    </div><!-- end .player-wrap -->
+
+    <!-- ── Side Panel ────────────────────────────────────── -->
     <div class="side-panel" id="side-panel">
-
-        <!-- Episodes panel content -->
-        <div id="panel-episodes-content" style="display:none;flex-direction:column;height:100%;">
-            <div class="panel-header">
-                <h3>Episodes</h3>
-                <button class="panel-close" id="panel-close-btn">
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                </button>
+        <div class="panel-header">
+            <div class="panel-header-left">
+                <h3 id="panel-title">Player Settings</h3>
+                <span id="panel-subtitle">Customize your viewing experience</span>
             </div>
-            <div class="panel-body">
-                <div class="panel-season-row">
-                    <select class="panel-season-select" id="panel-season-select"></select>
-                    <input type="text" class="panel-ep-search" id="panel-ep-search" placeholder="Search..." />
-                </div>
-                <div id="panel-ep-list"></div>
-            </div>
+            <button class="panel-close" id="panel-close-btn">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+            </button>
         </div>
-
-        <!-- Settings panel content -->
-        <div id="panel-settings-content" style="display:none;flex-direction:column;height:100%;">
-            <div class="panel-header">
-                <div>
-                    <h3>Player Settings</h3>
-                    <div style="font-size:12px;color:var(--grey-2);margin-top:2px;">Customize your viewing experience</div>
-                </div>
-                <button class="panel-close" id="settings-close-btn">
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                </button>
-            </div>
-            <div class="panel-body">
-                <!-- Tabs -->
-                <div class="settings-tabs">
-                    <button class="settings-tab active" data-tab="servers">Servers</button>
-                    <button class="settings-tab" data-tab="quality">Quality</button>
-                    <button class="settings-tab" data-tab="speed">Speed</button>
-                </div>
-
-                <!-- Servers tab -->
-                <div class="settings-panel-body active" id="stab-servers">
-                    <div id="settings-servers-list"></div>
-                </div>
-
-                <!-- Quality tab (informational — VidSrc controls this) -->
-                <div class="settings-panel-body" id="stab-quality">
-                    <p style="font-size:13px;color:var(--grey-2);margin-bottom:16px;">
-                        Quality is managed by the streaming server. Switch servers if you want different quality options.
-                    </p>
-                    <div class="setting-item active">
-                        <div class="setting-item-left">
-                            <span class="setting-item-label">Auto</span>
-                            <span class="setting-item-sub">Best available quality</span>
-                        </div>
-                        <span class="setting-item-badge">Active</span>
-                    </div>
-                </div>
-
-                <!-- Speed tab -->
-                <div class="settings-panel-body" id="stab-speed">
-                    <p style="font-size:13px;color:var(--grey-2);margin-bottom:16px;">
-                        Playback speed is controlled by the embedded player. Use the player's own speed controls.
-                    </p>
-                    <div class="speed-grid">
-                        ${['0.5x','0.75x','Normal','1.25x','1.5x','2x'].map((s,i) =>
-                        `<button class="speed-btn ${i===2?'active':''}">${s}</button>`
-                        ).join('')}
-                    </div>
-                </div>
-            </div>
-        </div>
-
+        <div class="panel-tabs" id="panel-tabs"></div>
+        <div class="panel-body" id="panel-body"></div>
     </div>
-</div>
+
+</div><!-- end .watch-page -->
 
 <script type="module">
     import { tmdb, streamApi } from '/js/api.js';
     import '/js/auth.js';
 
-    /* ── URL params ─────────────────────────────────────────── */
+    /* ── URL params ─────────────────────────────────────── */
     const p         = new URLSearchParams(location.search);
     const id        = p.get('id');
     const mediaType = p.get('type') || 'movie';
     const season    = p.get('season')  ? +p.get('season')  : 1;
     const episode   = p.get('episode') ? +p.get('episode') : 1;
+    if (!id) { location.href = '/'; }
 
-    if (!id) location.href = '/';
+    /* ── State ──────────────────────────────────────────── */
+    let sources        = [];
+    let currentSource  = 0;
+    let currentQuality = '';
+    let currentSub     = '';
+    let allSeasons     = [];
+    let currentSeason  = season;
+    let currentEp      = episode;
+    let panelMode      = null;
+    let activeTab      = '';
+    let baseEmbedUrl   = '';
 
-    /* ── State ──────────────────────────────────────────────── */
-    let sources       = [];
-    let currentSource = 0;
-    let allSeasons    = [];
-    let currentSeason = season;
-    let currentEp     = episode;
-    let panelMode     = null; // 'episodes' | 'settings' | null
-    let mediaData     = null;
+    /* ── Elements ───────────────────────────────────────── */
+    const iframe      = document.getElementById('player-iframe');
+    const loader      = document.getElementById('player-loader');
+    const loaderTitle = document.getElementById('loader-title');
+    const loaderSub   = document.getElementById('loader-sub');
+    const topbarTitle = document.getElementById('topbar-title');
+    const topbarSub   = document.getElementById('topbar-sub');
+    const sidePanel   = document.getElementById('side-panel');
+    const panelTabs   = document.getElementById('panel-tabs');
+    const panelBody   = document.getElementById('panel-body');
+    const ctrlEp      = document.getElementById('ctrl-episodes');
+    const fsExpand    = document.getElementById('fs-expand');
+    const fsCollapse  = document.getElementById('fs-collapse');
 
-    /* ── Elements ───────────────────────────────────────────── */
-    const iframe          = document.getElementById('player-iframe');
-    const loader          = document.getElementById('player-loader');
-    const loaderTitle     = document.getElementById('loader-title');
-    const loaderSub       = document.getElementById('loader-sub');
-    const topbarTitle     = document.getElementById('topbar-title');
-    const topbarSub       = document.getElementById('topbar-sub');
-    const serverPills     = document.getElementById('server-pills');
-    const sidePanel       = document.getElementById('side-panel');
-    const epContent       = document.getElementById('panel-episodes-content');
-    const settingsContent = document.getElementById('panel-settings-content');
-    const ctrlEpisodes    = document.getElementById('ctrl-episodes');
-    const ctrlEpLabel     = document.getElementById('ctrl-episodes-label');
-
-    /* ── Back navigation ────────────────────────────────────── */
     const backHref = `/detail.html?id=${id}&type=${mediaType}`;
-    document.getElementById('back-btn').href  = backHref;
-    document.getElementById('ctrl-back').href = backHref;
+    document.getElementById('back-btn').href = backHref;
 
-    /* ── Load media info + stream sources ──────────────────── */
-    async function init() {
-        try {
-            const [data, stream] = await Promise.all([
-                mediaType === 'tv' ? tmdb.tv(id) : tmdb.movie(id),
-                mediaType === 'tv'
-                    ? streamApi.tv(id, season, episode)
-                    : streamApi.movie(id),
-            ]);
+    /* ── Quality options ─────────────────────────────────── */
+    const QUALITIES = [
+        { label: '4K',    badge: 'ULTRA HD', value: '2160p' },
+        { label: '1080p', badge: 'FULL HD',  value: '1080p' },
+        { label: '720p',  badge: 'HD',       value: '720p'  },
+        { label: '480p',  badge: 'SD',       value: '480p'  },
+        { label: '360p',  badge: 'LOW',      value: '360p'  },
+    ];
 
-            mediaData = data;
-            sources   = stream.sources || [];
+    /* ── Subtitle languages ──────────────────────────────── */
+    const SUBTITLES = [
+        { label: 'Off',        value: ''   },
+        { label: 'English',    value: 'en' },
+        { label: 'Spanish',    value: 'es' },
+        { label: 'French',     value: 'fr' },
+        { label: 'German',     value: 'de' },
+        { label: 'Portuguese', value: 'pt' },
+        { label: 'Italian',    value: 'it' },
+        { label: 'Arabic',     value: 'ar' },
+        { label: 'Hindi',      value: 'hi' },
+        { label: 'Japanese',   value: 'ja' },
+        { label: 'Korean',     value: 'ko' },
+        { label: 'Chinese',    value: 'zh' },
+        { label: 'Russian',    value: 'ru' },
+        { label: 'Dutch',      value: 'nl' },
+        { label: 'Turkish',    value: 'tr' },
+        { label: 'Polish',     value: 'pl' },
+        { label: 'Swedish',    value: 'sv' },
+    ];
 
-            const title = data.title || data.name || '';
-            document.title = `${title} — CineStream`;
-            loaderTitle.textContent  = title;
-            topbarTitle.textContent  = title;
-
-            if (mediaType === 'tv') {
-                const epLabel = `Season ${season} · Episode ${episode}`;
-                loaderSub.textContent  = epLabel;
-                topbarSub.textContent  = epLabel;
-                ctrlEpisodes.style.display  = 'flex';
-                ctrlEpLabel.style.display   = 'inline';
-
-                // Load seasons for panel
-                allSeasons = (data.seasons || []).filter(s => s.season_number > 0);
-                buildSeasonSelect();
-                loadPanelEpisodes(season);
-            } else {
-                loaderSub.textContent = (data.release_date || '').slice(0,4);
-            }
-
-            if (!sources.length) {
-                loaderTitle.textContent = 'No playable video found';
-                loaderSub.textContent = 'Add a licensed stream provider or try another title.';
-                buildServerPills();
-                buildSettingsServers();
-                return;
-            }
-
-            buildServerPills();
-            buildSettingsServers();
-            loadSource(0);
-
-        } catch (err) {
-            loaderTitle.textContent = 'Failed to load';
-            loaderSub.textContent   = err.message || 'Please try again';
-            console.error(err);
-        }
+    /* ── Build embed URL with params ─────────────────────── */
+    function buildEmbedUrl(base, quality, sub) {
+        const params = [];
+        if (sub)     params.push(`ds_lang=${sub}`);
+        if (quality) params.push(`_ql=${quality}`);
+        return params.length
+            ? base + (base.includes('?') ? '&' : '?') + params.join('&')
+            : base;
     }
 
-    /* ── Load a stream source into the iframe ───────────────── */
-    function loadSource(index) {
+    /* ── Load source ─────────────────────────────────────── */
+    function loadSource(index, quality = currentQuality, sub = currentSub) {
         if (!sources[index]) return;
-        currentSource = index;
-        const src = sources[index].embedUrl;
-        iframe.src = src;
-
-        // Update pill active state
-        document.querySelectorAll('.server-pill').forEach((p, i) =>
-            p.classList.toggle('active', i === index));
-        document.querySelectorAll('.settings-server-item').forEach((p, i) =>
-            p.classList.toggle('active', i === index));
-
-        // Hide loader after short delay (iframe takes a moment)
-        setTimeout(() => loader.classList.add('hidden'), 2000);
+        currentSource  = index;
+        currentQuality = quality;
+        currentSub     = sub;
+        baseEmbedUrl   = sources[index].embedUrl;
+        iframe.src     = buildEmbedUrl(baseEmbedUrl, quality, sub);
+        setTimeout(() => loader.classList.add('hidden'), 2500);
+        if (panelMode === 'settings') renderTab(activeTab);
     }
 
-    /* ── Server pills (bottom bar) ──────────────────────────── */
-    function buildServerPills() {
-        serverPills.innerHTML = sources.map((s, i) => `
-      <button class="server-pill ${i === 0 ? 'active' : ''}" data-i="${i}">
-        ${s.provider}
-      </button>`).join('');
-        serverPills.querySelectorAll('.server-pill').forEach(btn =>
-            btn.addEventListener('click', () => loadSource(+btn.dataset.i)));
-    }
+    /* ── Panel tabs config ───────────────────────────────── */
+    const SETTINGS_TABS = [
+        { id: 'quality',   label: 'Quality',
+            icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>` },
+        { id: 'subtitles', label: 'Subtitles',
+            icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-7 7H5v-2h8v2zm-2 4H5v-2h6v2zm9-4h-4v-2h4v2zm0 4h-4v-2h4v2z"/></svg>` },
+        { id: 'servers',   label: 'Servers',
+            icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 13H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1v-6c0-.55-.45-1-1-1zm-2 5h-2v-2h2v2zm-4 0h-2v-2h2v2zM20 3H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zm-2 5h-2V6h2v2zm-4 0h-2V6h2v2z"/></svg>` },
+        { id: 'speed',     label: 'Speed',
+            icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.27-10.44zm-9.79 6.84a2 2 0 0 0 2.83 0l5.66-8.49-8.49 5.66a2 2 0 0 0 0 2.83z"/></svg>` },
+    ];
+    const EPISODES_TABS = [
+        { id: 'episodes', label: 'Episodes',
+            icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>` },
+    ];
 
-    /* ── Settings — Servers tab ─────────────────────────────── */
-    function buildSettingsServers() {
-        const list = document.getElementById('settings-servers-list');
-        list.innerHTML = sources.map((s, i) => `
-      <div class="setting-item settings-server-item ${i === 0 ? 'active' : ''}" data-i="${i}">
-        <div class="setting-item-left">
-          <span class="setting-item-label">${s.provider}</span>
-          <span class="setting-item-sub">${s.quality || 'HD'}</span>
-        </div>
-        <span class="setting-item-badge">${i === 0 ? 'Active' : 'Switch'}</span>
-      </div>`).join('');
-        list.querySelectorAll('.settings-server-item').forEach(item =>
-            item.addEventListener('click', () => {
-                loadSource(+item.dataset.i);
-                // Update badges
-                list.querySelectorAll('.settings-server-item').forEach((el, i) => {
-                    el.classList.toggle('active', i === +item.dataset.i);
-                    el.querySelector('.setting-item-badge').textContent = i === +item.dataset.i ? 'Active' : 'Switch';
-                });
-            }));
-    }
-
-    /* ── Panel open/close ───────────────────────────────────── */
-    function openPanel(mode) {
-        if (panelMode === mode) { closePanel(); return; }
+    /* ── Open / close panel ──────────────────────────────── */
+    function openPanel(mode, tab) {
         panelMode = mode;
+        activeTab = tab || (mode === 'settings' ? 'quality' : 'episodes');
         sidePanel.classList.add('open');
-        epContent.style.display       = mode === 'episodes' ? 'flex' : 'none';
-        settingsContent.style.display = mode === 'settings' ? 'flex' : 'none';
-        ctrlEpisodes.classList.toggle('active', mode === 'episodes');
+
+        const tabs = mode === 'settings' ? SETTINGS_TABS : EPISODES_TABS;
+        document.getElementById('panel-title').textContent    = mode === 'settings' ? 'Player Settings' : 'Episodes';
+        document.getElementById('panel-subtitle').textContent = mode === 'settings' ? 'Customize your viewing experience' : '';
+
+        panelTabs.innerHTML = tabs.map(t => `
+      <button class="panel-tab ${t.id === activeTab ? 'active' : ''}" data-tab="${t.id}">
+        ${t.icon} ${t.label}
+      </button>`).join('');
+        panelTabs.querySelectorAll('.panel-tab').forEach(btn =>
+            btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+
+        renderTab(activeTab);
         document.getElementById('ctrl-settings').classList.toggle('active', mode === 'settings');
+        ctrlEp.classList.toggle('active', mode === 'episodes');
+    }
+
+    function switchTab(tab) {
+        activeTab = tab;
+        panelTabs.querySelectorAll('.panel-tab').forEach(b =>
+            b.classList.toggle('active', b.dataset.tab === tab));
+        renderTab(tab);
+    }
+
+    function renderTab(tab) {
+        switch (tab) {
+            case 'quality':   renderQualityTab();   break;
+            case 'subtitles': renderSubtitlesTab(); break;
+            case 'servers':   renderServersTab();   break;
+            case 'speed':     renderSpeedTab();     break;
+            case 'episodes':  renderEpisodesTab();  break;
+        }
     }
 
     function closePanel() {
         panelMode = null;
         sidePanel.classList.remove('open');
-        ctrlEpisodes.classList.remove('active');
         document.getElementById('ctrl-settings').classList.remove('active');
+        document.getElementById('ctrl-subtitles').classList.remove('active');
+        ctrlEp.classList.remove('active');
     }
 
-    ctrlEpisodes.addEventListener('click', () => openPanel('episodes'));
-    document.getElementById('ctrl-settings').addEventListener('click', () => openPanel('settings'));
-    document.getElementById('panel-close-btn').addEventListener('click', closePanel);
-    document.getElementById('settings-close-btn').addEventListener('click', closePanel);
+    /* ── Quality tab ─────────────────────────────────────── */
+    function renderQualityTab() {
+        panelBody.innerHTML = QUALITIES.map(q => `
+      <div class="quality-item ${currentQuality === q.value ? 'active' : ''}" data-q="${q.value}">
+        <span class="quality-label">${q.label}</span>
+        <span class="quality-badge">${q.badge}</span>
+      </div>`).join('');
+        panelBody.querySelectorAll('.quality-item').forEach(item =>
+            item.addEventListener('click', () => {
+                currentQuality = item.dataset.q;
+                loadSource(currentSource, currentQuality, currentSub);
+            }));
+    }
 
-    /* ── Settings tabs ──────────────────────────────────────── */
-    document.querySelectorAll('.settings-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.settings-panel-body').forEach(b => b.classList.remove('active'));
-            tab.classList.add('active');
-            document.getElementById(`stab-${tab.dataset.tab}`)?.classList.add('active');
-        });
-    });
+    /* ── Subtitles tab ───────────────────────────────────── */
+    function renderSubtitlesTab() {
+        panelBody.innerHTML = `
+      <input class="subtitle-search" placeholder="Search language..." id="sub-search" />
+      <div id="sub-list"></div>`;
 
-    /* ── Season select (panel) ──────────────────────────────── */
-    function buildSeasonSelect() {
-        const sel = document.getElementById('panel-season-select');
-        sel.innerHTML = allSeasons.map(s =>
-            `<option value="${s.season_number}" ${s.season_number === currentSeason ? 'selected' : ''}>
-        Season ${s.season_number}
-      </option>`).join('');
-        sel.addEventListener('change', () => {
-            currentSeason = +sel.value;
-            loadPanelEpisodes(currentSeason);
+        function drawList(items) {
+            document.getElementById('sub-list').innerHTML = items.map(s => `
+        <div class="subtitle-item ${currentSub === s.value ? 'active' : ''}" data-sub="${s.value}">
+          <span class="subtitle-label">${s.label}</span>
+          <div class="subtitle-check"></div>
+        </div>`).join('');
+            document.querySelectorAll('.subtitle-item').forEach(item =>
+                item.addEventListener('click', () => {
+                    currentSub = item.dataset.sub;
+                    loadSource(currentSource, currentQuality, currentSub);
+                    document.querySelectorAll('.subtitle-item').forEach(el =>
+                        el.classList.toggle('active', el.dataset.sub === currentSub));
+                }));
+        }
+
+        drawList(SUBTITLES);
+        document.getElementById('sub-search').addEventListener('input', e => {
+            const q = e.target.value.toLowerCase();
+            drawList(q ? SUBTITLES.filter(s => s.label.toLowerCase().includes(q)) : SUBTITLES);
         });
     }
 
-    /* ── Load episodes into panel ───────────────────────────── */
-    async function loadPanelEpisodes(seasonNum) {
-        const listEl = document.getElementById('panel-ep-list');
+    /* ── Servers tab ─────────────────────────────────────── */
+    function renderServersTab() {
+        panelBody.innerHTML = sources.map((s, i) => `
+      <div class="server-item ${i === currentSource ? 'active' : ''}" data-i="${i}">
+        <div class="server-item-left">
+          <span class="server-name">${s.provider}</span>
+          <span class="server-qual">${s.quality || 'HD'}</span>
+        </div>
+        <span class="server-badge">${i === currentSource ? 'Active' : 'Switch'}</span>
+      </div>`).join('');
+        panelBody.querySelectorAll('.server-item').forEach(item =>
+            item.addEventListener('click', () =>
+                loadSource(+item.dataset.i, currentQuality, currentSub)));
+    }
+
+    /* ── Speed tab ───────────────────────────────────────── */
+    const SPEEDS = ['0.25x','0.5x','0.75x','Normal','1.25x','1.5x','2x'];
+    let currentSpeed = 'Normal';
+    function renderSpeedTab() {
+        panelBody.innerHTML = `
+      <p style="font-size:13px;color:var(--grey-2);margin-bottom:14px;">
+        Playback speed is controlled by the embedded player.
+      </p>
+      <div class="speed-grid">
+        ${SPEEDS.map(s => `
+          <button class="speed-btn ${s === currentSpeed ? 'active' : ''}" data-s="${s}">${s}</button>
+        `).join('')}
+      </div>`;
+        panelBody.querySelectorAll('.speed-btn').forEach(btn =>
+            btn.addEventListener('click', () => {
+                currentSpeed = btn.dataset.s;
+                renderSpeedTab();
+            }));
+    }
+
+    /* ── Episodes tab ────────────────────────────────────── */
+    async function renderEpisodesTab() {
+        panelBody.innerHTML = `
+      <div class="ep-controls">
+        <select class="ep-season-sel" id="ep-season-sel">
+          ${allSeasons.map(s => `
+            <option value="${s.season_number}" ${s.season_number === currentSeason ? 'selected' : ''}>
+              Season ${s.season_number}
+            </option>`).join('')}
+        </select>
+        <input type="text" class="ep-search" id="ep-search" placeholder="Search episode..." />
+      </div>
+      <div id="ep-list">
+        <div style="display:flex;justify-content:center;padding:30px;">
+          <div class="spinner"></div>
+        </div>
+      </div>`;
+
+        document.getElementById('ep-season-sel').addEventListener('change', async e => {
+            currentSeason = +e.target.value;
+            await loadEpisodes(currentSeason);
+        });
+        document.getElementById('ep-search').addEventListener('input', e => {
+            const q = e.target.value.toLowerCase();
+            document.querySelectorAll('.ep-item').forEach(el => {
+                el.style.display = el.textContent.toLowerCase().includes(q) ? 'flex' : 'none';
+            });
+        });
+
+        await loadEpisodes(currentSeason);
+    }
+
+    async function loadEpisodes(seasonNum) {
+        const listEl = document.getElementById('ep-list');
+        if (!listEl) return;
         listEl.innerHTML = `<div style="display:flex;justify-content:center;padding:30px;"><div class="spinner"></div></div>`;
         try {
             const data = await tmdb.tvSeason(id, seasonNum);
-            renderPanelEpisodes(data.episodes || [], seasonNum);
+            const eps  = data.episodes || [];
+            if (!eps.length) { listEl.innerHTML = `<p style="color:var(--grey-2);font-size:13px;padding:20px;">No episodes found.</p>`; return; }
+
+            listEl.innerHTML = eps.map(ep => {
+                const watching = seasonNum === currentSeason && ep.episode_number === currentEp;
+                const thumb    = ep.still_path ? `https://image.tmdb.org/t/p/w300${ep.still_path}` : '';
+                return `
+          <div class="ep-item ${watching ? 'watching' : ''}" data-s="${seasonNum}" data-e="${ep.episode_number}">
+            ${watching ? '<div class="ep-watch-badge">Watching</div>' : ''}
+            ${thumb
+                    ? `<img class="ep-thumb" src="${thumb}" loading="lazy" alt="Ep ${ep.episode_number}">`
+                    : `<div class="ep-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--grey-3);font-size:22px;">▶</div>`}
+            <div class="ep-info">
+              <div class="ep-num">${seasonNum}. Episode ${ep.episode_number}</div>
+              <div class="ep-title">${ep.name || `Episode ${ep.episode_number}`}</div>
+              <div class="ep-desc">${ep.overview || ''}</div>
+            </div>
+          </div>`;
+            }).join('');
+
+            listEl.querySelector('.watching')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            listEl.querySelectorAll('.ep-item').forEach(item =>
+                item.addEventListener('click', () => {
+                    location.href = `/watch.html?id=${id}&type=tv&season=${item.dataset.s}&episode=${item.dataset.e}`;
+                }));
         } catch (_) {
-            listEl.innerHTML = `<p style="color:var(--grey-2);font-size:13px;">Failed to load episodes.</p>`;
+            listEl.innerHTML = `<p style="color:var(--grey-2);font-size:13px;padding:20px;">Failed to load episodes.</p>`;
         }
     }
 
-    function renderPanelEpisodes(eps, seasonNum) {
-        const listEl = document.getElementById('panel-ep-list');
-        if (!eps.length) { listEl.innerHTML = `<p style="color:var(--grey-2);font-size:13px;">No episodes.</p>`; return; }
-
-        listEl.innerHTML = eps.map(ep => {
-            const isWatching = seasonNum === currentSeason && ep.episode_number === currentEp;
-            const thumb = ep.still_path ? `https://image.tmdb.org/t/p/w300${ep.still_path}` : '';
-            return `
-        <div class="panel-ep-item ${isWatching ? 'watching' : ''}"
-             data-season="${seasonNum}" data-ep="${ep.episode_number}">
-          ${isWatching ? '<div class="watching-badge">Watching</div>' : ''}
-          ${thumb
-                ? `<img class="panel-ep-thumb" src="${thumb}" loading="lazy" alt="Ep ${ep.episode_number}">`
-                : `<div class="panel-ep-thumb" style="background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;color:var(--grey-3);font-size:22px;">▶</div>`}
-          <div class="panel-ep-info">
-            <div class="panel-ep-num">${seasonNum}. Episode ${ep.episode_number}</div>
-            <div class="panel-ep-title">${ep.name || `Episode ${ep.episode_number}`}</div>
-            <div class="panel-ep-desc">${ep.overview || ''}</div>
-          </div>
-        </div>`;
-        }).join('');
-
-        // Scroll to watching
-        listEl.querySelector('.watching')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
-        // Click → navigate
-        listEl.querySelectorAll('.panel-ep-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const s = item.dataset.season;
-                const e = item.dataset.ep;
-                location.href = `/watch.html?id=${id}&type=tv&season=${s}&episode=${e}`;
-            });
-        });
-    }
-
-    /* ── Episode search (panel) ─────────────────────────────── */
-    document.getElementById('panel-ep-search')?.addEventListener('input', async (ev) => {
-        const q = ev.target.value.trim().toLowerCase();
-        if (!q) { loadPanelEpisodes(currentSeason); return; }
-        // Filter from current rendered items
-        document.querySelectorAll('.panel-ep-item').forEach(item => {
-            const text = item.textContent.toLowerCase();
-            item.style.display = text.includes(q) ? 'flex' : 'none';
-        });
-    });
-
-    /* ── Keyboard shortcuts ─────────────────────────────────── */
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closePanel();
-        if (e.key === 'Backspace' && !['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) {
-            location.href = backHref;
+    /* ── Fullscreen ──────────────────────────────────────── */
+    function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            document.getElementById('player-wrap').requestFullscreen();
+        } else {
+            document.exitFullscreen();
         }
+    }
+    document.addEventListener('fullscreenchange', () => {
+        const isFs = !!document.fullscreenElement;
+        fsExpand.style.display   = isFs ? 'none'  : 'block';
+        fsCollapse.style.display = isFs ? 'block' : 'none';
+        document.getElementById('ctrl-fullscreen').title = isFs ? 'Exit Fullscreen (F)' : 'Fullscreen (F)';
+    });
+    document.getElementById('ctrl-fullscreen').addEventListener('click', toggleFullscreen);
+
+    /* ── Button wiring ───────────────────────────────────── */
+    ctrlEp.addEventListener('click', () =>
+        panelMode === 'episodes' ? closePanel() : openPanel('episodes', 'episodes'));
+
+    document.getElementById('ctrl-settings').addEventListener('click', () =>
+        panelMode === 'settings' ? closePanel() : openPanel('settings', 'quality'));
+
+    document.getElementById('ctrl-subtitles').addEventListener('click', () => {
+        if (panelMode === 'settings' && activeTab === 'subtitles') { closePanel(); return; }
+        openPanel('settings', 'subtitles');
+        document.getElementById('ctrl-subtitles').classList.add('active');
     });
 
-    /* ── Show controls on mouse move ───────────────────────── */
+    document.getElementById('panel-close-btn').addEventListener('click', closePanel);
+
+    /* ── Keyboard shortcuts ──────────────────────────────── */
+    document.addEventListener('keydown', e => {
+        if (['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+        if (e.key === 'Escape')                        closePanel();
+        if (e.key === 'f' || e.key === 'F')            toggleFullscreen();
+        if (e.key === 'Backspace')                     location.href = backHref;
+    });
+
+    /* ── Show/hide controls on mouse move ───────────────── */
     let hideTimer;
     document.getElementById('watch-page').addEventListener('mousemove', () => {
         document.getElementById('player-topbar').classList.add('visible');
@@ -740,6 +807,49 @@
             }
         }, 3000);
     });
+
+    /* ── Init ────────────────────────────────────────────── */
+    async function init() {
+        try {
+            const data = await (mediaType === 'tv' ? tmdb.tv(id) : tmdb.movie(id));
+
+            const rawImdb = data.imdb_id || data.external_ids?.imdb_id || '';
+            const imdbId  = /^tt\d+$/.test(rawImdb) ? rawImdb : '';
+
+            const stream = await (mediaType === 'tv'
+                ? streamApi.tv(id, season, episode, imdbId)
+                : streamApi.movie(id, imdbId));
+
+            sources = stream.sources || [];
+
+            const title = data.title || data.name || '';
+            document.title          = `${title} — CineStream`;
+            loaderTitle.textContent = title;
+            topbarTitle.textContent = title;
+
+            if (mediaType === 'tv') {
+                const epLabel          = `Season ${season} · Episode ${episode}`;
+                loaderSub.textContent  = epLabel;
+                topbarSub.textContent  = epLabel;
+                ctrlEp.style.display   = 'flex';
+                allSeasons = (data.seasons || []).filter(s => s.season_number > 0);
+            } else {
+                loaderSub.textContent = (data.release_date || '').slice(0, 4);
+            }
+
+            if (!sources.length) {
+                loaderTitle.textContent = 'No stream available';
+                loaderSub.textContent   = 'Try another server or title.';
+                return;
+            }
+
+            loadSource(0);
+        } catch (err) {
+            loaderTitle.textContent = 'Failed to load';
+            loaderSub.textContent   = err.message || 'Please try again';
+            console.error(err);
+        }
+    }
 
     init();
 </script>

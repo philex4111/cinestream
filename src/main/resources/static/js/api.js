@@ -64,8 +64,9 @@ export const tmdb = {
 
 /* ── Stream (VidSrc embed URLs) ────────────────────────────── */
 export const streamApi = {
-    movie: (tmdbId)                        => req(`/stream/movie/${tmdbId}`),
-    tv:    (tmdbId, season, episode)       => req(`/stream/tv/${tmdbId}/season/${season}/episode/${episode}`),
+    movie: (tmdbId, imdbId = '')  => req(`/stream/movie/${tmdbId}${imdbId ? '?imdbId=' + imdbId : ''}`),
+    tv:    (tmdbId, season, episode, imdbId = '') =>
+        req(`/stream/tv/${tmdbId}/season/${season}/episode/${episode}${imdbId ? '?imdbId=' + imdbId : ''}`),
 };
 
 /* ── Watchlist ─────────────────────────────────────────────── */
