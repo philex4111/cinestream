@@ -4,9 +4,13 @@ A full-stack movie and TV streaming platform built with **Kotlin + Ktor** on the
 
 ---
 ![Screenshot 2026-06-29 182511.png](project%20pics/Screenshot%202026-06-29%20182511.png)
+
 ![Screenshot 2026-06-29 182747.png](project%20pics/Screenshot%202026-06-29%20182747.png)
+
 ![Screenshot 2026-07-02 132520.png](project%20pics/Screenshot%202026-07-02%20132520.png)
+
 ![Screenshot 2026-07-02 132546.png](project%20pics/Screenshot%202026-07-02%20132546.png)
+
 ![Screenshot 2026-07-02 132617.png](project%20pics/Screenshot%202026-07-02%20132617.png)
 ## ✨ Features
 
