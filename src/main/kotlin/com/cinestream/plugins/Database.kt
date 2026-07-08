@@ -10,10 +10,8 @@ import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
 
 fun Application.configureDatabase() {
-    var dbUrl = environment.config.propertyOrNull("db.url")?.getString()
-        ?: "jdbc:sqlite:./cinestream.db"
-    val dbDriver = environment.config.propertyOrNull("db.driver")?.getString()
-        ?: "org.sqlite.JDBC"
+    var dbUrl = System.getenv("DB_URL") ?: "jdbc:sqlite:./cinestream.db"
+    val dbDriver = System.getenv("DB_DRIVER") ?: "org.sqlite.JDBC"
 
     // Fix for Railway: ensure Postgres URLs have the jdbc: prefix
     if (dbUrl.startsWith("postgres://") || dbUrl.startsWith("postgresql://")) {
