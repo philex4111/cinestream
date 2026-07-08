@@ -10,17 +10,26 @@ import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
 
 fun Application.configureDatabase() {
-    val dbUrl = environment.config.propertyOrNull("db.url")?.getString()
+    var dbUrl = environment.config.propertyOrNull("db.url")?.getString()
         ?: "jdbc:sqlite:./cinestream.db"
     val dbDriver = environment.config.propertyOrNull("db.driver")?.getString()
         ?: "org.sqlite.JDBC"
+
+    // Fix for Railway: ensure Postgres URLs have the jdbc: prefix
+    if (dbUrl.startsWith("postgres://")) {
+        dbUrl = "jdbc:" + dbUrl
+    }
 
     val hikariConfig = HikariConfig().apply {
         jdbcUrl = dbUrl
         driverClassName = dbDriver
         maximumPoolSize = 10
         // SQLite needs single connection; Postgres can use more
-        if (dbUrl.contains("sqlite")) maximumPoolSize = 1
+        if (dbUrl.contains("sqlite")) {
+            maximumPoolSize = 1
+        } else if (dbUrl.contains("postgresql") || dbUrl.contains("postgres")) {
+            maximumPoolSize = 10
+        }
     }
 
     val dataSource = HikariDataSource(hikariConfig)
