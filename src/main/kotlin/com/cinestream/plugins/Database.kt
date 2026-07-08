@@ -16,7 +16,7 @@ fun Application.configureDatabase() {
         ?: "org.sqlite.JDBC"
 
     // Fix for Railway: ensure Postgres URLs have the jdbc: prefix
-    if (dbUrl.startsWith("postgres://")) {
+    if (dbUrl.startsWith("postgres://") || dbUrl.startsWith("postgresql://")) {
         dbUrl = "jdbc:" + dbUrl
     }
 
