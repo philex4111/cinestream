@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CineStream TV — Details</title>
+    <title>CineStream TV â€” Details</title>
     <link rel="stylesheet" href="../css/main.css">
     <link rel="stylesheet" href="css/tv.css">
     <style>
-        /* ── TV-Optimized Full-Width Detail Styles (Parallax + Logic Parity) ── */
+        /* â”€â”€ TV-Optimized Full-Width Detail Styles (Parallax + Logic Parity) â”€â”€ */
         .tv-shell { background: #050505; height: 100vh; overflow: hidden; position: relative; width: 1280px; }
 
         .parallax-backdrop {
@@ -95,7 +95,7 @@
                 <p class="hero-overview-tv" id="overview"></p>
 
                 <div class="hero-actions-tv" id="main-actions">
-                    <a id="play-btn" class="btn btn-primary btn-tv tv-focusable">▶ Play</a>
+                    <a id="play-btn" class="btn btn-primary btn-tv tv-focusable">â–¶ Play</a>
                     <button id="watchlist-btn" class="btn btn-secondary btn-tv tv-focusable">Add to Watchlist</button>
                 </div>
             </div>
@@ -172,11 +172,11 @@
             document.getElementById('title').innerHTML = data.title || data.name;
             document.getElementById('overview').innerHTML = (data.overview || "");
             document.getElementById('parallax-backdrop').style.backgroundImage = "url('https://image.tmdb.org/t/p/w1280" + data.backdrop_path + "')";
-            document.getElementById('type-badge').innerHTML = (type === 'tv' ? '📺 TV SERIES' : '🎬 MOVIE');
+            document.getElementById('type-badge').innerHTML = (type === 'tv' ? 'ðŸ“º TV SERIES' : 'ðŸŽ¬ MOVIE');
 
             var year = (data.release_date || data.first_air_date || '').substring(0, 4);
-            var rate = data.vote_average ? '★ ' + data.vote_average.toFixed(1) : '–';
-            document.getElementById('meta').innerHTML = '<span class="rating-tv">' + rate + '</span><span> • ' + year + '</span>' + (data.runtime ? '<span> • ' + data.runtime + 'm</span>' : '');
+            var rate = data.vote_average ? 'â˜… ' + data.vote_average.toFixed(1) : 'â€“';
+            document.getElementById('meta').innerHTML = '<span class="rating-tv">' + rate + '</span><span> â€¢ ' + year + '</span>' + (data.runtime ? '<span> â€¢ ' + data.runtime + 'm</span>' : '');
 
             if (data.genres) {
                 var gHtml = '';
@@ -184,7 +184,7 @@
                 document.getElementById('genres').innerHTML = gHtml;
             }
 
-            var stats = '<div class="stat-item-tv"><span class="stat-label-tv">Rating</span><span class="stat-value-tv" style="color:var(--crimson)">★ ' + rate + ' / 10</span></div>';
+            var stats = '<div class="stat-item-tv"><span class="stat-label-tv">Rating</span><span class="stat-value-tv" style="color:var(--crimson)">â˜… ' + rate + ' / 10</span></div>';
             stats += '<div class="stat-item-tv"><span class="stat-label-tv">Year</span><span class="stat-value-tv">' + year + '</span></div>';
             if (data.status) stats += '<div class="stat-item-tv"><span class="stat-label-tv">Status</span><span class="stat-value-tv">' + data.status + '</span></div>';
             if (data.number_of_episodes) stats += '<div class="stat-item-tv"><span class="stat-label-tv">Episodes</span><span class="stat-value-tv">' + data.number_of_episodes + '</span></div>';
@@ -253,48 +253,41 @@
             xhr.send();
         }
 
+        function scrollFocusedIntoView(element, preferredTop) {
+            var scroller = document.getElementById('main-scroller');
+            var top = 0, node = element;
+            while (node && node !== scroller) { top += node.offsetTop || 0; node = node.offsetParent; }
+            var target = Math.max(0, top - preferredTop);
+            scroller.style.transform = 'translateY(-' + target + 'px)';
+            document.getElementById('parallax-backdrop').style.transform = 'translateY(-' + Math.min(320, Math.round(target * 0.28)) + 'px)';
+        }
+
         function updateFocus() {
             var all = document.querySelectorAll('.tv-focused, .tv-nav-focused');
-            for(var i=0; i<all.length; i++) { all[i].classList.remove('tv-focused'); all[i].classList.remove('tv-nav-focused'); }
-
+            for (var i = 0; i < all.length; i++) { all[i].classList.remove('tv-focused'); all[i].classList.remove('tv-nav-focused'); }
             var scroller = document.getElementById('main-scroller');
             var bg = document.getElementById('parallax-backdrop');
+            var item;
 
             if (focusZone === 'nav') {
-                var items = document.querySelectorAll('.tv-nav-item, .navbar-logo');
+                var items = document.querySelectorAll('.navbar-logo, .tv-nav-item');
                 if (items[navIdx]) items[navIdx].classList.add('tv-nav-focused');
-                scroller.style.transform = 'translateY(0)';
-                bg.style.transform = 'translateY(0)';
+                scroller.style.transform = 'translateY(0)'; bg.style.transform = 'translateY(0)';
             } else if (focusZone === 'hero') {
                 var btns = document.querySelectorAll('#main-actions .tv-focusable');
                 if (btns[heroIdx]) btns[heroIdx].classList.add('tv-focused');
-                scroller.style.transform = 'translateY(0)';
-                bg.style.transform = 'translateY(0)';
+                scroller.style.transform = 'translateY(0)'; bg.style.transform = 'translateY(0)';
             } else if (focusZone === 'cast') {
-                var item = document.getElementById('cast-' + castIdx);
-                if (item) item.classList.add('tv-focused');
-                document.getElementById('cast-slider').style.transform = 'translateX(-' + (castIdx * 134) + 'px)';
-                scroller.style.transform = 'translateY(-350px)';
-                bg.style.transform = 'translateY(-100px)';
+                item = document.getElementById('cast-' + castIdx);
+                if (item) { item.classList.add('tv-focused'); document.getElementById('cast-slider').style.transform = 'translateX(-' + Math.max(0, castIdx - 4) * 134 + 'px)'; scrollFocusedIntoView(item, 170); }
             } else if (focusZone === 'episodes') {
-                if (heroIdx === 0) { // Season btn
-                    document.getElementById('season-selector').classList.add('tv-focused');
-                    scroller.style.transform = 'translateY(-550px)';
-                } else { // Ep list
-                    var item = document.getElementById('ep-' + epIdx);
-                    if (item) item.classList.add('tv-focused');
-                    scroller.style.transform = 'translateY(-' + (650 + epIdx * 105) + 'px)';
-                }
-                bg.style.transform = 'translateY(-200px)';
+                item = heroIdx === 0 ? document.getElementById('season-selector') : document.getElementById('ep-' + epIdx);
+                if (item) { item.classList.add('tv-focused'); scrollFocusedIntoView(item, heroIdx === 0 ? 140 : 150); }
             } else if (focusZone === 'similar') {
-                var item = document.getElementById('sim-' + simIdx);
-                if (item) item.classList.add('tv-focused');
-                document.getElementById('similar-slider').style.transform = 'translateX(-' + (simIdx * 204) + 'px)';
-                scroller.style.transform = 'translateY(-900px)';
-                bg.style.transform = 'translateY(-300px)';
+                item = document.getElementById('sim-' + simIdx);
+                if (item) { item.classList.add('tv-focused'); document.getElementById('similar-slider').style.transform = 'translateX(-' + Math.max(0, simIdx - 4) * 204 + 'px)'; scrollFocusedIntoView(item, 180); }
             }
         }
-
         document.onkeydown = function(e) {
             var k = e.keyCode || e.which;
             if (k === 37) { // Left

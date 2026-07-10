@@ -1,4 +1,4 @@
-﻿/* CineStream TV: Legacy CSS for LG NetCast 4.0 (2013-2014) */
+/* CineStream TV: Legacy CSS for LG NetCast 4.0 (2013-2014) */
 html, body {
     width: 1280px; height: 720px; /* Fixed HD resolution */
     margin: 0; padding: 0; overflow: hidden;
@@ -109,3 +109,20 @@ html, body {
 
 /* Scrollbar hide */
 ::-webkit-scrollbar { display: none; }
+
+/* ── TV home: viewport-safe rail composition ──────────────── */
+.tv-stage .tv-hero { height: 372px; }
+.tv-stage .hero-content { bottom: 34px; max-width: 620px; }
+.tv-stage .hero-title { font-size: 46px; line-height: 1.04; margin-bottom: 10px; }
+.tv-stage .hero-meta { font-size: 16px; margin-bottom: 10px; }
+.tv-stage .hero-overview { font-size: 16px; line-height: 1.4; margin: 0 0 18px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.tv-stage .hero-actions .btn { padding: 10px 24px; font-size: 16px; }
+.tv-stage .tv-rails-container { top: -18px; }
+.tv-stage .tv-section { height: 250px; padding: 0 60px 20px; box-sizing: border-box; }
+.tv-stage .section-title { margin-bottom: 10px; font-size: 18px; }
+.tv-stage .tv-card { width: 156px; border-width: 3px; }
+.tv-stage .card-poster { aspect-ratio: 2 / 3; object-fit: cover; }
+.tv-stage .card-overlay { padding: 8px; }
+.tv-stage .card-overlay-title { font-size: 13px; }
+.tv-stage .tv-slider { gap: 16px; }
+.tv-stage .section-header { min-height: 32px; }

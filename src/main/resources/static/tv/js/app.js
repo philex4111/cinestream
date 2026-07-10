@@ -1,4 +1,4 @@
-﻿/* CineStream TV: ES5 Focus Engine - Advanced Site Parity */
+/* CineStream TV: ES5 Focus Engine - Advanced Site Parity */
 var TVApp = {
     zone: 'rail', // 'nav', 'hero', 'rail', 'tab'
     navIdx: 1, heroIdx: 0, railIdx: 0, cardIdx: 0, tabIdx: 0,
@@ -195,7 +195,7 @@ var TVApp = {
                 slider.style.transform = 'translateX(-' + (this.cardIdx * 220) + 'px)';
 
                 // Shift whole content up. Each rail is 280px high.
-                var yShift = (this.railIdx * 280) + 250;
+                var yShift = (this.railIdx * 250) + 210;
                 hero.style.transform = 'translateY(-' + Math.min(yShift, 450) + 'px)';
                 scroller.style.transform = 'translateY(-' + yShift + 'px)';
 
