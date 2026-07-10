@@ -1,9 +1,78 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>CineStream TV</title><link rel="stylesheet" href="../css/main.css"><link rel="stylesheet" href="css/tv.css"></head>
+<head>
+    <meta charset="UTF-8">
+    <title>CineStream TV</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="css/tv.css">
+</head>
 <body>
-<div class="tv-shell">
-<nav class="navbar tv-navbar" id="tv-navbar"><a href="/" class="navbar-logo"><span class="logo-icon">&#9654;</span>CineStream</a><div class="navbar-links" id="tv-nav-links"><a href="index.html" class="active">Home</a><a href="../browse.html">Browse</a><a href="../watchlist.html">Watchlist</a></div><div class="navbar-right"><a href="../search.html" class="icon-btn tv-nav-action" aria-label="Search">&#9906;</a><a href="../login.html" class="btn btn-crimson tv-sign-in">Sign In</a></div></nav>
-<main class="tv-stage"><section class="hero tv-hero" id="hero"><div class="hero-backdrop" id="hero-backdrop"></div><div class="hero-content"><div class="hero-badge" id="hero-badge">CINESTREAM FEATURED</div><h1 class="hero-title" id="hero-title">Loading...</h1><div class="hero-meta" id="hero-meta"></div><p class="hero-overview" id="hero-overview"></p><div class="hero-actions"><a class="btn btn-primary tv-focusable" id="hero-play" href="#">&#9654; Play</a><a class="btn btn-secondary tv-focusable" id="hero-info" href="#">More Info</a></div></div><div class="hero-dots" id="hero-dots"></div></section><div class="tv-rails" id="tv-rails"><section class="section tv-section" id="section-trending"><div class="section-header"><h2 class="section-title">Trending Today</h2></div><div class="slider-wrap"><div class="slider tv-slider"></div></div></section><section class="section tv-section" id="section-movies"><div class="section-header"><h2 class="section-title">Popular Movies</h2></div><div class="slider-wrap"><div class="slider tv-slider"></div></div></section><section class="section tv-section" id="section-tv"><div class="section-header"><h2 class="section-title">Popular TV Shows</h2></div><div class="slider-wrap"><div class="slider tv-slider"></div></div></section></div></main><div class="tv-status" id="tv-status">Loading CineStream…</div></div>
-<script src="js/app.js"></script>
-</body></html>
+    <div class="tv-shell">
+        <nav class="tv-navbar" id="tv-navbar">
+            <a href="index.html" class="navbar-logo" data-nav="logo">CineStream</a>
+            <div class="navbar-links">
+                <a href="index.html" class="tv-nav-item active" data-nav="home">Home</a>
+                <a href="browse.html" class="tv-nav-item" data-nav="browse">Browse</a>
+                <a href="watchlist.html" class="tv-nav-item" data-nav="watchlist">Watchlist</a>
+                <a href="search.html" class="tv-nav-item" data-nav="search">Search</a>
+                <a href="login.html" class="tv-nav-item" data-nav="login">Sign In</a>
+            </div>
+        </nav>
+
+        <main class="tv-stage">
+            <!-- Hero Slider -->
+            <section class="tv-hero" id="hero">
+                <div class="hero-backdrop-overlay"></div>
+                <div class="hero-content">
+                    <div class="hero-badge" id="hero-badge">★ Trending Now</div>
+                    <h1 class="hero-title" id="hero-title">Loading...</h1>
+                    <div class="hero-meta" id="hero-meta"></div>
+                    <p class="hero-overview" id="hero-overview"></p>
+                    <div class="hero-actions" id="hero-actions">
+                        <a class="btn btn-primary" id="hero-play" href="#">▶ Play</a>
+                        <a class="btn btn-secondary" id="hero-info" href="#">See More</a>
+                    </div>
+                </div>
+                <div class="hero-dots" id="hero-dots" style="position:absolute; right:60px; bottom:30px; display:flex; gap:10px;"></div>
+            </section>
+
+            <div class="tv-rails-container">
+                <div class="tv-rails-scroller" id="tv-rails">
+                    <!-- Top 10 -->
+                    <section class="tv-section" id="section-top10">
+                        <h2 class="section-title">Top 10 Today</h2>
+                        <div class="slider-wrap"><div class="tv-slider" id="slider-top10"></div></div>
+                    </section>
+
+                    <!-- Trending Today (with tabs) -->
+                    <section class="tv-section" id="section-trending">
+                        <div class="section-header" style="display:flex; align-items:center; gap:30px; margin-bottom:15px;">
+                            <h2 class="section-title" style="margin-bottom:0;">Trending Today</h2>
+                            <div class="trending-tabs" id="trending-tabs" style="display:flex; gap:15px;">
+                                <div class="tab-tv active" data-tab="movie">Movies</div>
+                                <div class="tab-tv" data-tab="tv">Series</div>
+                            </div>
+                        </div>
+                        <div class="slider-wrap"><div class="tv-slider" id="slider-trending"></div></div>
+                    </section>
+
+                    <!-- Popular Movies -->
+                    <section class="tv-section" id="section-movies">
+                        <h2 class="section-title">Popular Movies</h2>
+                        <div class="slider-wrap"><div class="tv-slider" id="slider-movies"></div></div>
+                    </section>
+
+                    <!-- Popular TV -->
+                    <section class="tv-section" id="section-tv">
+                        <h2 class="section-title">Popular TV Shows</h2>
+                        <div class="slider-wrap"><div class="tv-slider" id="slider-tv"></div></div>
+                    </section>
+                </div>
+            </div>
+        </main>
+
+        <div class="tv-status" id="tv-status">Loading CineStream...</div>
+    </div>
+    <script src="js/app.js"></script>
+</body>
+</html>

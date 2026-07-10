@@ -1,108 +1,249 @@
-﻿/* CineStream TV: ES5/XHR remote adapter over the same /api TMDB contract as the web app. */
-var CineStreamTV = {
-    api: '/api', rows: [], data: [], row: 0, col: 0, area: 'cards', nav: 1, heroAction: 0, heroItems: [], heroIndex: 0,
-    init: function () { this.bind(); this.load(); },
-    bind: function () {
+﻿/* CineStream TV: Advanced ES5 Focus Engine for LG NetCast 4.0 (Mirrored from static/index.html) */
+var TVApp = {
+    zone: 'rail', // 'nav', 'hero', 'rail', 'tab'
+    navIdx: 1, heroIdx: 0, railIdx: 0, cardIdx: 0, tabIdx: 0,
+    rails: ['top10', 'trending', 'movies', 'tv'],
+    data: {},
+    api: '/api',
+    heroTimer: null,
+    heroItems: [],
+    currentTab: 'movie',
+
+    init: function() {
+        this.bindKeys();
+        this.loadContent();
+        this.startHeroCycle();
+    },
+
+    bindKeys: function() {
         var self = this;
-        document.onkeydown = function (e) {
-            e = e || window.event; var k = e.keyCode || e.which;
-            if (k === 37) self.left(); else if (k === 39) self.right(); else if (k === 38) self.up(); else if (k === 40) self.down();
-            else if (k === 13) self.enter(); else if (k === 461 || k === 8) { e.preventDefault(); self.back(); }
+        document.onkeydown = function(e) {
+            var k = e.keyCode || e.which;
+            if (k === 37) self.move('left');
+            else if (k === 39) self.move('right');
+            else if (k === 38) self.move('up');
+            else if (k === 40) self.move('down');
+            else if (k === 13) self.enter();
+            else if (k === 461 || k === 8) { e.preventDefault(); self.back(); }
+            self.stopHeroCycle(); // Pause auto-slide on interaction
         };
-        document.getElementById('hero-play').onclick = function (e) { e.preventDefault(); self.goWatch(); };
-        document.getElementById('hero-info').onclick = function (e) { e.preventDefault(); self.goDetail(); };
     },
-    load: function () {
-        var self = this, done = 0, sources = [
-            ['/tmdb/trending?time=day', 'section-trending'], ['/tmdb/movie/popular?page=1', 'section-movies'], ['/tmdb/tv/popular?page=1', 'section-tv']
+
+    loadContent: function() {
+        var self = this;
+        var sources = [
+            ['/tmdb/trending?time=day', 'top10'],
+            ['/tmdb/trending?time=week', 'trending_all'],
+            ['/tmdb/movie/popular', 'movies'],
+            ['/tmdb/tv/popular', 'tv']
         ];
-        for (var i = 0; i < sources.length; i++) (function (source, index) {
-            self.get(source[0], function (payload) { self.renderRow(source[1], payload.results || [], index); done++; self.ready(done); }, function () { self.renderRow(source[1], [], index); done++; self.status('Unable to load some CineStream content.', true); self.ready(done); });
-        }(sources[i], i));
-    },
-    get: function (path, yes, no) {
-        var xhr = new XMLHttpRequest(); xhr.open('GET', this.api + path, true);
-        xhr.onreadystatechange = function () { if (xhr.readyState !== 4) return; if (xhr.status >= 200 && xhr.status < 300) { try { yes(JSON.parse(xhr.responseText)); } catch (x) { no(); } } else no(); };
-        xhr.send();
-    },
-    ready: function (done) {
-        if (done !== 3) return;
-        this.rows = document.getElementsByClassName('tv-section');
-        this.heroItems = (this.data[0] || []).filter(function (item) { return item.backdrop_path; }).slice(0, 8);
-        if (!this.heroItems.length) this.heroItems = (this.data[1] || []).filter(function (item) { return item.backdrop_path; }).slice(0, 8);
-        if (!this.heroItems.length) { this.status('No content is available right now.', true); return; }
-        this.makeDots(); this.showHero(this.heroItems[0]); this.status(''); this.focusCards();
-    },
-    renderRow: function (id, items, index) {
-        this.data[index] = items; var slider = document.getElementById(id).getElementsByClassName('tv-slider')[0], html = '';
-        for (var i = 0; i < items.length; i++) {
-            var item = items[i], title = this.escape(item.title || item.name || 'Untitled'), image = item.backdrop_path ? 'https://image.tmdb.org/t/p/w342' + item.backdrop_path : '';
-            html += '<article class="card tv-card" data-index="' + i + '"><img class="card-poster" src="' + image + '" alt="' + title + '"><div class="card-overlay"><div class="card-overlay-title">' + title + '</div></div></article>';
+
+        var loaded = 0;
+        for (var i = 0; i < sources.length; i++) {
+            (function(src, key) {
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', self.api + src, true);
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        var results = JSON.parse(xhr.responseText).results;
+                        self.data[key] = results;
+
+                        if (key === 'trending_all') {
+                            self.heroItems = results.slice(0, 8);
+                            self.renderHeroDots();
+                            self.filterTrending();
+                        } else {
+                            self.renderRail(key, results);
+                        }
+
+                        loaded++;
+                        if (loaded === 4) {
+                            self.status('');
+                            self.updateFocus();
+                            self.setHero(self.heroItems[0]);
+                        }
+                    }
+                };
+                xhr.send();
+            })(sources[i][0], sources[i][1]);
         }
-        slider.innerHTML = html || '<div style="color:var(--grey-2);padding:20px">No titles available.</div>';
     },
-    left: function () {
-        if (this.area === 'nav') { if (this.nav > 0) { this.nav--; this.focusNav(); } return; }
-        if (this.area === 'hero') { this.heroAction = 0; this.focusHero(); return; }
-        if (this.col > 0) { this.col--; this.focusCards(); } else { this.area = 'nav'; this.nav = 1; this.focusNav(); }
+
+    filterTrending: function() {
+        var all = this.data['trending_all'] || [];
+        var filtered = [];
+        for (var i = 0; i < all.length; i++) {
+            if (this.currentTab === 'movie' && (all[i].media_type === 'movie' || !all[i].media_type)) filtered.push(all[i]);
+            if (this.currentTab === 'tv' && all[i].media_type === 'tv') filtered.push(all[i]);
+        }
+        this.data['trending'] = filtered;
+        this.renderRail('trending', filtered);
     },
-    right: function () {
-        if (this.area === 'nav') { var links = this.links(); if (this.nav < links.length - 1) { this.nav++; this.focusNav(); } return; }
-        if (this.area === 'hero') { this.heroAction = 1; this.focusHero(); return; }
-        var list = this.data[this.row] || []; if (this.col < list.length - 1) { this.col++; this.focusCards(); }
+
+    renderRail: function(key, items) {
+        var slider = document.getElementById('slider-' + key);
+        if (!slider) return;
+        var html = '';
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            var img = item.poster_path ? 'https://image.tmdb.org/t/p/w342' + item.poster_path : '';
+            html += '<div class="tv-card" id="card-' + key + '-' + i + '">' +
+                    '<img class="card-poster" src="' + img + '">' +
+                    '<div class="card-overlay"><div class="card-overlay-title">' + (item.title || item.name) + '</div></div>' +
+                    '</div>';
+        }
+        slider.innerHTML = html;
     },
-    up: function () {
-        if (this.area === 'nav') return;
-        if (this.area === 'hero') return;
-        if (this.row === 0) { this.area = 'hero'; this.heroAction = 0; this.focusHero(); } else { this.row--; this.clamp(); this.focusCards(); }
+
+    renderHeroDots: function() {
+        var dots = document.getElementById('hero-dots');
+        var html = '';
+        for (var i = 0; i < this.heroItems.length; i++) {
+            html += '<div class="hero-dot" id="dot-' + i + '"></div>';
+        }
+        dots.innerHTML = html;
     },
-    down: function () {
-        if (this.area === 'nav') return;
-        if (this.area === 'hero') { this.area = 'cards'; this.focusCards(); return; }
-        if (this.row < this.data.length - 1) { this.row++; this.clamp(); this.focusCards(); }
+
+    setHero: function(item) {
+        if (!item) return;
+        this.currentHeroItem = item;
+        document.getElementById('hero-title').innerHTML = item.title || item.name;
+        document.getElementById('hero-overview').innerHTML = (item.overview || "").substring(0, 220) + "...";
+
+        var year = (item.release_date || item.first_air_date || '').substring(0, 4);
+        var rate = item.vote_average ? '★ ' + item.vote_average.toFixed(1) : '–';
+        document.getElementById('hero-meta').innerHTML = '<span style="color:#E50914;font-weight:700;">' + rate + '</span><span class="dot"></span><span>' + year + '</span>';
+
+        if (item.backdrop_path) {
+            document.getElementById('hero').style.backgroundImage = "url('https://image.tmdb.org/t/p/w1280" + item.backdrop_path + "')";
+        }
+
+        var dots = document.getElementsByClassName('hero-dot');
+        for(var i=0; i<dots.length; i++) dots[i].className = 'hero-dot';
+        var activeDot = document.getElementById('dot-' + this.heroIdx);
+        if (activeDot) activeDot.className = 'hero-dot active';
     },
-    enter: function () {
-        if (this.area === 'nav') { var link = this.links()[this.nav]; if (link) window.location.href = link.href; }
-        else if (this.area === 'hero') { if (this.heroAction === 0) this.goWatch(); else this.goDetail(); }
-        else this.goDetail();
+
+    startHeroCycle: function() {
+        var self = this;
+        this.heroTimer = setInterval(function() {
+            if (self.zone !== 'hero' && self.heroItems.length > 0) {
+                self.heroIdx = (self.heroIdx + 1) % self.heroItems.length;
+                self.setHero(self.heroItems[self.heroIdx]);
+            }
+        }, 7000);
     },
-    back: function () { if (this.area === 'nav') { this.area = 'cards'; this.focusCards(); } else { this.area = 'nav'; this.nav = 1; this.focusNav(); } },
-    clamp: function () { var max = (this.data[this.row] || []).length - 1; if (this.col > max) this.col = Math.max(0, max); },
-    clear: function () {
-        var cards = document.getElementsByClassName('tv-card'), links = this.links(), buttons = [document.getElementById('hero-play'), document.getElementById('hero-info')];
-        for (var i = 0; i < cards.length; i++) cards[i].className = 'card tv-card';
-        for (i = 0; i < links.length; i++) links[i].className = links[i].className.replace(' tv-nav-focused', '');
-        for (i = 0; i < buttons.length; i++) buttons[i].className = buttons[i].className.replace(' tv-focused', '');
+
+    stopHeroCycle: function() {
+        clearInterval(this.heroTimer);
+        this.startHeroCycle(); // Restart timer to reset the 7s countdown
     },
-    focusCards: function () {
-        this.clear(); var section = this.rows[this.row]; if (!section) return; var cards = section.getElementsByClassName('tv-card'), card = cards[this.col]; if (!card) return;
-        card.className += ' tv-focused'; this.scroll(section.getElementsByClassName('tv-slider')[0], card); this.showHero((this.data[this.row] || [])[this.col]);
+
+    move: function(dir) {
+        if (this.zone === 'nav') {
+            if (dir === 'right' && this.navIdx < 5) this.navIdx++;
+            else if (dir === 'left' && this.navIdx > 0) this.navIdx--;
+            else if (dir === 'down') this.zone = 'hero';
+        }
+        else if (this.zone === 'hero') {
+            if (dir === 'up') this.zone = 'nav';
+            else if (dir === 'down') { this.zone = 'rail'; this.railIdx = 0; this.cardIdx = 0; }
+            else if (dir === 'right' && this.heroIdx < 1) this.heroIdx++;
+            else if (dir === 'left' && this.heroIdx > 0) this.heroIdx--;
+        }
+        else if (this.zone === 'tab') {
+            if (dir === 'right' && this.tabIdx < 1) this.tabIdx++;
+            else if (dir === 'left' && this.tabIdx > 0) this.tabIdx--;
+            else if (dir === 'up') this.zone = 'rail'; // Go back to top10
+            else if (dir === 'down') { this.zone = 'rail'; this.cardIdx = 0; }
+        }
+        else if (this.zone === 'rail') {
+            if (dir === 'up') {
+                if (this.railIdx === 1) { this.zone = 'tab'; } // Reach tabs from Trending
+                else if (this.railIdx > 0) { this.railIdx--; this.cardIdx = 0; }
+                else this.zone = 'hero';
+            }
+            else if (dir === 'down') {
+                if (this.railIdx < this.rails.length - 1) { this.railIdx++; this.cardIdx = 0; }
+            }
+            else if (dir === 'right') {
+                var max = (this.data[this.rails[this.railIdx]] || []).length - 1;
+                if (this.cardIdx < max) this.cardIdx++;
+            }
+            else if (dir === 'left') {
+                if (this.cardIdx > 0) this.cardIdx--;
+                else { this.zone = 'nav'; this.navIdx = 0; }
+            }
+        }
+        this.updateFocus();
     },
-    focusNav: function () { this.clear(); var link = this.links()[this.nav]; if (link) link.className += ' tv-nav-focused'; },
-    focusHero: function () { this.clear(); var b = this.heroAction === 0 ? document.getElementById('hero-play') : document.getElementById('hero-info'); b.className += ' tv-focused'; },
-    scroll: function (slider, card) { var x = Math.max(0, card.offsetLeft - 12); slider.scrollLeft = x; },
-    links: function () { return document.getElementById('tv-navbar').getElementsByTagName('a'); },
-    showHero: function (item) {
-        if (!item) return; this.current = item;
-        var title = item.title || item.name || 'Untitled', year = (item.release_date || item.first_air_date || '').substring(0, 4), type = item.media_type || (item.first_air_date ? 'tv' : 'movie'), rating = item.vote_average ? item.vote_average.toFixed(1) : '–';
-        document.getElementById('hero-title').innerHTML = this.escape(title);
-        document.getElementById('hero-overview').innerHTML = this.escape((item.overview || 'Discover your next great watch on CineStream.').substring(0, 220));
-        document.getElementById('hero-meta').innerHTML = '<span class="rating">★ ' + rating + '</span><span class="dot"></span><span>' + (year || 'New') + '</span><span class="dot"></span><span>' + (type === 'tv' ? 'TV Series' : 'Movie') + '</span>';
-        document.getElementById('hero-backdrop').style.backgroundImage = item.backdrop_path ? "url('https://image.tmdb.org/t/p/w1280" + item.backdrop_path + "')" : '';
-        document.getElementById('hero-play').href = '/watch.html?id=' + item.id + '&type=' + type;
-        document.getElementById('hero-info').href = '/detail.html?id=' + item.id + '&type=' + type;
-        this.heroIndex = this.heroItems.indexOf(item); this.updateDots();
+
+    updateFocus: function() {
+        var all = document.querySelectorAll('.tv-focused, .tv-nav-focused');
+        for(var i=0; i<all.length; i++) { all[i].classList.remove('tv-focused'); all[i].classList.remove('tv-nav-focused'); }
+
+        if (this.zone === 'nav') {
+            var navItems = document.querySelectorAll('.tv-nav-item, .navbar-logo');
+            if (navItems[this.navIdx]) navItems[this.navIdx].classList.add('tv-nav-focused');
+        }
+        else if (this.zone === 'hero') {
+            var btns = document.querySelectorAll('.hero-actions .btn');
+            if (btns[this.heroIdx]) btns[this.heroIdx].classList.add('tv-focused');
+        }
+        else if (this.zone === 'tab') {
+            var tabs = document.querySelectorAll('.tab-tv');
+            if (tabs[this.tabIdx]) tabs[this.tabIdx].classList.add('tv-nav-focused');
+        }
+        else if (this.zone === 'rail') {
+            var key = this.rails[this.railIdx];
+            var card = document.getElementById('card-' + key + '-' + this.cardIdx);
+            if (card) {
+                card.classList.add('tv-focused');
+                var slider = document.getElementById('slider-' + key);
+                slider.style.transform = 'translateX(-' + (this.cardIdx * 220) + 'px)';
+                document.getElementById('tv-rails').style.transform = 'translateY(-' + (this.railIdx * 320) + 'px)';
+
+                // Mirror dynamic hero logic: update background to focused card
+                var item = this.data[key][this.cardIdx];
+                if (item) this.setHero(item);
+            }
+        }
     },
-    makeDots: function () {
-        var self = this, dots = document.getElementById('hero-dots'), html = '';
-        for (var i = 0; i < this.heroItems.length; i++) html += '<button class="hero-dot" data-index="' + i + '"></button>';
-        dots.innerHTML = html; var buttons = dots.getElementsByTagName('button');
-        for (i = 0; i < buttons.length; i++) (function (n) { buttons[n].onclick = function () { self.showHero(self.heroItems[n]); }; }(i));
+
+    enter: function() {
+        if (this.zone === 'nav') {
+            var links = document.querySelectorAll('.tv-nav-item, .navbar-logo');
+            window.location.href = links[this.navIdx].getAttribute('href');
+        }
+        else if (this.zone === 'tab') {
+            var tabs = document.querySelectorAll('.tab-tv');
+            this.currentTab = tabs[this.tabIdx].getAttribute('data-tab');
+            for(var i=0; i<tabs.length; i++) tabs[i].className = 'tab-tv';
+            tabs[this.tabIdx].className = 'tab-tv active';
+            this.filterTrending();
+        }
+        else {
+            var item = null;
+            if (this.zone === 'hero') item = this.heroItems[this.heroIdx];
+            else item = this.data[this.rails[this.railIdx]][this.cardIdx];
+
+            if (item) {
+                var type = item.media_type || (item.first_air_date ? 'tv' : 'movie');
+                window.location.href = 'detail.html?id=' + item.id + '&type=' + type;
+            }
+        }
     },
-    updateDots: function () { var dots = document.getElementById('hero-dots').getElementsByClassName('hero-dot'); for (var i = 0; i < dots.length; i++) dots[i].className = i === this.heroIndex ? 'hero-dot active' : 'hero-dot'; },
-    goWatch: function () { if (this.current) window.location.href = document.getElementById('hero-play').href; },
-    goDetail: function () { if (this.current) window.location.href = document.getElementById('hero-info').href; },
-    status: function (message, error) { var s = document.getElementById('tv-status'); s.innerHTML = message; s.className = message ? 'tv-status' + (error ? ' error' : '') : 'tv-status hidden'; },
-    escape: function (value) { return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+    back: function() {
+        if (this.zone !== 'nav') { this.zone = 'nav'; this.navIdx = 1; this.updateFocus(); }
+        else window.location.href = 'index.html';
+    },
+
+    status: function(msg) {
+        var el = document.getElementById('tv-status');
+        el.innerHTML = msg;
+        el.className = msg ? 'tv-status' : 'tv-status hidden';
+    }
 };
-window.onload = function () { CineStreamTV.init(); };
+
+window.onload = function() { TVApp.init(); };

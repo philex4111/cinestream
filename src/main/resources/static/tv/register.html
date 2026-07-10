@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CineStream TV — Register</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="css/tv.css">
+    <style>
+        .login-wrap {
+            height: 100vh; display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('https://image.tmdb.org/t/p/original/wwemzKWzjKYJFfCeiB57q3r4Bcm.jpg');
+            background-size: cover;
+        }
+        .login-box {
+            width: 450px; padding: 40px; background: rgba(0,0,0,0.95);
+            border-radius: var(--radius-md); border: 1px solid var(--grey-4);
+        }
+        .tv-input {
+            width: 100%; padding: 12px 16px; margin-bottom: 15px;
+            background: var(--grey-4); border: 2px solid transparent;
+            border-radius: var(--radius-sm); color: #fff; font-size: 16px; outline: none;
+        }
+        .tv-input.tv-focused { border-color: var(--crimson); }
+        .login-btn {
+            width: 100%; padding: 14px; background: var(--crimson);
+            color: #fff; border: none; border-radius: var(--radius-sm);
+            font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 10px;
+        }
+        .login-btn.tv-focused { transform: scale(1.03); box-shadow: 0 0 20px var(--crimson); }
+    </style>
+</head>
+<body>
+    <div class="login-wrap">
+        <div class="login-box">
+            <h1 style="margin-bottom: 25px; text-align: center;">Create Account</h1>
+            <input type="text" class="tv-input tv-focusable" id="username" placeholder="Username">
+            <input type="email" class="tv-input tv-focusable" id="email" placeholder="Email Address">
+            <input type="password" class="tv-input tv-focusable" id="password" placeholder="Password">
+            <button class="login-btn tv-focusable" id="register-btn">Register</button>
+            <p id="error-msg" style="color: var(--crimson); margin-top: 15px; font-size: 14px; text-align: center;"></p>
+            <p style="text-align: center; color: var(--grey-2); margin-top: 20px; font-size: 14px;">Already have an account? Press BACK to login.</p>
+        </div>
+    </div>
+
+    <script>
+        var index = 0;
+        var items = document.querySelectorAll('.tv-focusable');
+
+        function updateFocus() {
+            for(var i=0; i<items.length; i++) items[i].classList.remove('tv-focused');
+            items[index].classList.add('tv-focused');
+            items[index].focus();
+        }
+
+        document.onkeydown = function(e) {
+            var k = e.keyCode || e.which;
+            if (k === 38 && index > 0) index--;
+            else if (k === 40 && index < items.length - 1) index++;
+            else if (k === 13) {
+                if (index === 3) performRegister();
+            }
+            else if (k === 461 || k === 8) {
+                window.location.href = 'login.html';
+            }
+            updateFocus();
+        };
+
+        function performRegister() {
+            var user = document.getElementById('username').value;
+            var email = document.getElementById('email').value;
+            var pass = document.getElementById('password').value;
+            var err = document.getElementById('error-msg');
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/auth/register', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200 || xhr.status === 201) {
+                        window.location.href = 'login.html';
+                    } else {
+                        var msg = "Registration failed";
+                        try { msg = JSON.parse(xhr.responseText).error || msg; } catch(e) {}
+                        err.innerHTML = msg;
+                    }
+                }
+            };
+            xhr.send(JSON.stringify({ username: user, email: email, password: pass }));
+        }
+
+        updateFocus();
+    </script>
+</body>
+</html>
