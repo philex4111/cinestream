@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>CineStream TV</title>
+    <link rel="stylesheet" href="css/tv.css">
+    <!-- Google Fonts might be too heavy for NetCast, using Arial fallback in CSS -->
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">CineStream</div>
+        </div>
+
+        <div class="hero" id="hero">
+            <div class="hero-overlay">
+                <h1 class="hero-title" id="hero-title">Welcome to CineStream</h1>
+                <p class="hero-overview" id="hero-overview">Select a movie or series to start watching.</p>
+            </div>
+        </div>
+
+        <h2 class="section-title">Trending Now</h2>
+        <div id="poster-grid-container" style="width: 100%; overflow: hidden;">
+            <div class="row" id="poster-grid">
+                <!-- Posters will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
