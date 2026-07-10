@@ -21,109 +21,149 @@
 
         <div class="tv-stage">
             <div style="padding: 100px 60px 20px;">
-                <div id="filter-wrap" style="display:flex; gap:20px; margin-bottom: 30px;">
-                    <div class="btn btn-secondary filter-tab active" data-type="movie">Movies</div>
-                    <div class="btn btn-secondary filter-tab" data-type="tv">TV Series</div>
+                <!-- Filter Bar from site logic -->
+                <div id="filter-bar-tv" style="display:flex; align-items:center; gap:20px; margin-bottom: 30px;">
+                    <div class="tab-tv active" data-type="all">All</div>
+                    <div class="tab-tv" data-type="movie">Movies</div>
+                    <div class="tab-tv" data-type="tv">Series</div>
+                    <div style="width:1px; height:30px; background:var(--grey-4); margin:0 10px;"></div>
+                    <div id="results-info" style="color:var(--grey-3); font-size:16px; font-weight:600;">Loading...</div>
                 </div>
+
                 <div class="tv-rails-container" style="top: 250px; padding-top: 0;">
                     <div class="tv-rails-scroller" id="browse-rails">
-                        <section class="tv-section">
-                            <div class="slider-wrap"><div class="tv-slider" id="browse-grid"></div></div>
-                        </section>
+                        <!-- We'll use multiple rows to support more movies (Legacy Grid) -->
+                        <div id="browse-grid-container">
+                            <section class="tv-section"><div class="tv-slider" id="row-0"></div></section>
+                            <section class="tv-section"><div class="tv-slider" id="row-1"></div></section>
+                            <section class="tv-section"><div class="tv-slider" id="row-2"></div></section>
+                            <section class="tv-section"><div class="tv-slider" id="row-3"></div></section>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <div class="tv-status" id="tv-status">Fetching Titles...</div>
     </div>
 
     <script>
-        var zone = 'nav', navIdx = 0, filterIdx = 0, cardIdx = 0;
-        var currentType = 'movie', browseData = [];
+        var zone = 'rail', navIdx = 1, tabIdx = 0, rowIdx = 0, colIdx = 0;
+        var currentType = 'all', browseData = [], itemsPerRow = 20;
+
+        function init() {
+            bindKeys();
+            loadBrowse();
+        }
+
+        function bindKeys() {
+            document.onkeydown = function(e) {
+                var k = e.keyCode || e.which;
+                if (k === 37) move('left');
+                else if (k === 39) move('right');
+                else if (k === 38) move('up');
+                else if (k === 40) move('down');
+                else if (k === 13) enter();
+                else if (k === 461 || k === 8) { e.preventDefault(); window.location.href = 'index.html'; }
+            };
+        }
+
+        function loadBrowse() {
+            var xhr = new XMLHttpRequest();
+            var path = currentType === 'movie' ? '/tmdb/movie/popular' : (currentType === 'tv' ? '/tmdb/tv/popular' : '/tmdb/trending?time=day');
+            xhr.open('GET', '/api' + path, true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    browseData = JSON.parse(xhr.responseText).results || [];
+                    renderBrowse();
+                    document.getElementById('tv-status').className += ' hidden';
+                    document.getElementById('results-info').innerHTML = browseData.length + ' Popular Titles';
+                }
+            };
+            xhr.send();
+        }
+
+        function renderBrowse() {
+            // Split data into virtual rows
+            for(var r=0; r<4; r++) {
+                var html = '';
+                var start = r * itemsPerRow;
+                for (var i = start; i < start + itemsPerRow && i < browseData.length; i++) {
+                    var item = browseData[i];
+                    var img = item.poster_path ? 'https://image.tmdb.org/t/p/w342' + item.poster_path : '';
+                    html += '<div class="tv-card" id="card-' + r + '-' + (i-start) + '">' +
+                            '<img class="card-poster" src="' + img + '">' +
+                            '<div class="card-overlay"><div class="card-overlay-title">' + (item.title || item.name) + '</div></div>' +
+                            '</div>';
+                }
+                document.getElementById('row-' + r).innerHTML = html;
+            }
+            updateFocus();
+        }
+
+        function move(dir) {
+            if (zone === 'nav') {
+                if (dir === 'right' && navIdx < 4) navIdx++;
+                else if (dir === 'left' && navIdx > 0) navIdx--;
+                else if (dir === 'down') zone = 'tab';
+            }
+            else if (zone === 'tab') {
+                if (dir === 'up') zone = 'nav';
+                else if (dir === 'down') zone = 'rail';
+                else if (dir === 'right' && tabIdx < 2) tabIdx++;
+                else if (dir === 'left' && tabIdx > 0) tabIdx--;
+            }
+            else { // rail
+                if (dir === 'up') {
+                    if (rowIdx > 0) rowIdx--; else zone = 'tab';
+                } else if (dir === 'down' && rowIdx < 3) {
+                    rowIdx++;
+                } else if (dir === 'right' && colIdx < itemsPerRow - 1 && (rowIdx * itemsPerRow + colIdx + 1) < browseData.length) {
+                    colIdx++;
+                } else if (dir === 'left') {
+                    if (colIdx > 0) colIdx--; else { zone = 'nav'; navIdx = 0; }
+                }
+            }
+            updateFocus();
+        }
 
         function updateFocus() {
             var all = document.querySelectorAll('.tv-focused, .tv-nav-focused');
             for(var i=0; i<all.length; i++) { all[i].classList.remove('tv-focused'); all[i].classList.remove('tv-nav-focused'); }
 
             if (zone === 'nav') {
-                var items = document.querySelectorAll('.tv-nav-item, .navbar-logo');
-                if (items[navIdx]) items[navIdx].classList.add('tv-nav-focused');
-            } else if (zone === 'filter') {
-                var tabs = document.querySelectorAll('.filter-tab');
-                if (tabs[filterIdx]) tabs[filterIdx].classList.add('tv-focused');
-            } else if (zone === 'rail') {
-                var card = document.getElementById('card-browse-' + cardIdx);
+                var navItems = document.querySelectorAll('.tv-nav-item, .navbar-logo');
+                if (navItems[navIdx]) navItems[navIdx].classList.add('tv-nav-focused');
+            } else if (zone === 'tab') {
+                var tabs = document.querySelectorAll('.tab-tv');
+                if (tabs[tabIdx]) tabs[tabIdx].classList.add('tv-nav-focused');
+            } else {
+                var card = document.getElementById('card-' + rowIdx + '-' + colIdx);
                 if (card) {
                     card.classList.add('tv-focused');
-                    document.getElementById('browse-grid').style.transform = 'translateX(-' + (cardIdx * 220) + 'px)';
+                    document.getElementById('row-' + rowIdx).style.transform = 'translateX(-' + (colIdx * 220) + 'px)';
+                    document.getElementById('browse-grid-container').style.transform = 'translateY(-' + (rowIdx * 320) + 'px)';
                 }
             }
         }
 
-        document.onkeydown = function(e) {
-            var k = e.keyCode || e.which;
-            if (k === 37) { // Left
-                if (zone === 'nav' && navIdx > 0) navIdx--;
-                else if (zone === 'filter' && filterIdx > 0) filterIdx--;
-                else if (zone === 'rail' && cardIdx > 0) cardIdx--;
-            } else if (k === 39) { // Right
-                if (zone === 'nav' && navIdx < 5) navIdx++;
-                else if (zone === 'filter' && filterIdx < 1) filterIdx++;
-                else if (zone === 'rail' && cardIdx < browseData.length - 1) cardIdx++;
-            } else if (k === 38) { // Up
-                if (zone === 'filter') zone = 'nav';
-                else if (zone === 'rail') zone = 'filter';
-            } else if (k === 40) { // Down
-                if (zone === 'nav') zone = 'filter';
-                else if (zone === 'filter') zone = 'rail';
-            } else if (k === 13) { // Enter
-                if (zone === 'nav') {
-                    window.location.href = document.querySelectorAll('.tv-nav-item, .navbar-logo')[navIdx].getAttribute('href');
-                } else if (zone === 'filter') {
-                    var type = document.querySelectorAll('.filter-tab')[filterIdx].getAttribute('data-type');
-                    if (type !== currentType) {
-                        currentType = type;
-                        var tabs = document.querySelectorAll('.filter-tab');
-                        for(var i=0; i<tabs.length; i++) tabs[i].classList.remove('active');
-                        tabs[filterIdx].classList.add('active');
-                        load();
-                    }
-                } else if (zone === 'rail') {
-                    window.location.href = 'detail.html?id=' + browseData[cardIdx].id + '&type=' + currentType;
-                }
-            } else if (k === 461 || k === 8) { window.location.href = 'index.html'; }
-            updateFocus();
-        };
-
-        function load() {
-            var xhr = new XMLHttpRequest();
-            var path = currentType === 'movie' ? '/tmdb/movie/popular' : '/tmdb/tv/popular';
-            xhr.open('GET', '/api' + path, true);
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState === 4 && xhr.status === 200) {
-                    browseData = JSON.parse(xhr.responseText).results || [];
-                    render();
-                }
-            };
-            xhr.send();
-        }
-
-        function render() {
-            var html = '';
-            for (var i = 0; i < browseData.length; i++) {
-                var item = browseData[i];
-                var img = item.poster_path ? 'https://image.tmdb.org/t/p/w342' + item.poster_path : '';
-                html += '<div class="tv-card" id="card-browse-' + i + '">' +
-                        '<img class="card-poster" src="' + img + '">' +
-                        '<div class="card-overlay"><div class="card-overlay-title">' + (item.title || item.name) + '</div></div>' +
-                        '</div>';
+        function enter() {
+            if (zone === 'nav') {
+                window.location.href = document.querySelectorAll('.tv-nav-item, .navbar-logo')[navIdx].getAttribute('href');
+            } else if (zone === 'tab') {
+                var tabs = document.querySelectorAll('.tab-tv');
+                currentType = tabs[tabIdx].getAttribute('data-type');
+                for(var i=0; i<tabs.length; i++) tabs[i].className = 'tab-tv';
+                tabs[tabIdx].className = 'tab-tv active';
+                rowIdx = 0; colIdx = 0;
+                loadBrowse();
+            } else {
+                var item = browseData[rowIdx * itemsPerRow + colIdx];
+                if (item) window.location.href = 'detail.html?id=' + item.id + '&type=' + (item.media_type || currentType === 'all' ? 'movie' : currentType);
             }
-            document.getElementById('browse-grid').innerHTML = html;
-            cardIdx = 0;
-            updateFocus();
         }
 
-        load();
-        updateFocus();
+        init();
     </script>
 </body>
 </html>

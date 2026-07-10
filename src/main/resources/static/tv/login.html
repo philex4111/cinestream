@@ -8,58 +8,101 @@
     <style>
         .login-wrap {
             height: 100vh; display: flex; align-items: center; justify-content: center;
-            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://image.tmdb.org/t/p/original/wwemzKWzjKYJFfCeiB57q3r4Bcm.jpg');
+            background: linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.75)), url('https://image.tmdb.org/t/p/original/wwemzKWzjKYJFfCeiB57q3r4Bcm.jpg');
             background-size: cover;
         }
         .login-box {
-            width: 400px; padding: 40px; background: rgba(0,0,0,0.9);
-            border-radius: var(--radius-md); border: 1px solid var(--grey-4);
+            width: 420px; padding: 40px; background: rgba(10,10,10,0.95);
+            border-radius: var(--radius-md); border: 2px solid var(--grey-4);
         }
         .tv-input {
-            width: 100%; padding: 12px 16px; margin-bottom: 20px;
-            background: var(--grey-4); border: 2px solid transparent;
-            border-radius: var(--radius-sm); color: #fff; font-size: 16px; outline: none;
+            width: 100%; padding: 14px 20px; margin-bottom: 20px;
+            background: var(--grey-4); border: 3px solid transparent;
+            border-radius: var(--radius-sm); color: #fff; font-size: 18px; outline: none;
+            box-sizing: border-box;
         }
-        .tv-input.tv-focused { border-color: var(--crimson); }
+        .tv-input.tv-focused { border-color: var(--crimson); background: #222; }
         .login-btn {
-            width: 100%; padding: 14px; background: var(--crimson);
-            color: #fff; border: none; border-radius: var(--radius-sm);
-            font-size: 16px; font-weight: 700; cursor: pointer;
+            width: 100%; padding: 16px; background: var(--crimson);
+            color: #fff; border: 3px solid transparent; border-radius: var(--radius-sm);
+            font-size: 18px; font-weight: 700; cursor: pointer;
         }
-        .login-btn.tv-focused { transform: scale(1.05); box-shadow: 0 0 15px var(--crimson); }
+        .login-btn.tv-focused { border-color: #fff; transform: scale(1.02); }
     </style>
 </head>
 <body>
-    <div class="login-wrap">
-        <div class="login-box">
-            <h1 style="margin-bottom: 30px; text-align: center;">Sign In</h1>
-            <input type="email" class="tv-input tv-focusable" id="email" placeholder="Email Address" aria-label="Email Address">
-            <input type="password" class="tv-input tv-focusable" id="password" placeholder="Password" aria-label="Password">
-            <button class="login-btn tv-focusable" id="login-btn">Sign In</button>
-            <p id="error-msg" style="color: var(--crimson); margin-top: 20px; font-size: 14px; text-align: center;"></p>
+    <div class="tv-shell">
+        <nav class="tv-navbar" id="tv-navbar">
+            <a href="index.html" class="navbar-logo" data-nav="logo">CineStream</a>
+            <div class="navbar-links">
+                <a href="index.html" class="tv-nav-item" data-nav="home">Home</a>
+                <a href="browse.html" class="tv-nav-item" data-nav="browse">Browse</a>
+                <a href="watchlist.html" class="tv-nav-item" data-nav="watchlist">Watchlist</a>
+                <a href="search.html" class="tv-nav-item" data-nav="search">Search</a>
+                <a href="login.html" class="tv-nav-item active" data-nav="login">Sign In</a>
+            </div>
+        </nav>
+
+        <div class="login-wrap">
+            <div class="login-box">
+                <h1 style="margin-bottom: 30px; text-align: center; font-family: 'Bebas Neue'; letter-spacing: 2px;">Sign In</h1>
+                <input type="email" class="tv-input tv-focusable" id="email" placeholder="Email Address" aria-label="Email Address">
+                <input type="password" class="tv-input tv-focusable" id="password" placeholder="Password" aria-label="Password">
+                <button class="login-btn tv-focusable" id="login-btn">Sign In</button>
+
+                <div style="margin-top: 30px; text-align: center; border-top: 1px solid var(--grey-4); padding-top: 20px;">
+                    <p style="color: var(--grey-2); font-size: 14px; margin-bottom: 15px;">New to CineStream?</p>
+                    <a href="register.html" class="btn btn-secondary tv-focusable" style="width:100%; box-sizing: border-box; text-align: center;">Create Account</a>
+                </div>
+
+                <p id="error-msg" style="color: var(--crimson); margin-top: 20px; font-size: 14px; text-align: center; font-weight: 600;"></p>
+            </div>
         </div>
     </div>
 
     <script>
+        var zone = 'input'; // 'nav', 'input'
         var index = 0;
-        var items = document.querySelectorAll('.tv-focusable');
+        var navIdx = 4;
 
         function updateFocus() {
-            for(var i=0; i<items.length; i++) items[i].classList.remove('tv-focused');
-            items[index].classList.add('tv-focused');
-            items[index].focus();
+            var all = document.querySelectorAll('.tv-focused, .tv-nav-focused');
+            for(var i=0; i<all.length; i++) { all[i].classList.remove('tv-focused'); all[i].classList.remove('tv-nav-focused'); }
+
+            if (zone === 'nav') {
+                var navItems = document.querySelectorAll('.tv-nav-item, .navbar-logo');
+                if (navItems[navIdx]) navItems[navIdx].classList.add('tv-nav-focused');
+            } else {
+                var items = document.querySelectorAll('.tv-focusable');
+                if (items[index]) {
+                    items[index].classList.add('tv-focused');
+                    items[index].focus();
+                }
+            }
         }
 
         document.onkeydown = function(e) {
             var k = e.keyCode || e.which;
-            if (k === 38 && index > 0) index--;
-            else if (k === 40 && index < items.length - 1) index++;
-            else if (k === 13) {
-                if (index === 2) performLogin();
+            var items = document.querySelectorAll('.tv-focusable');
+
+            if (zone === 'nav') {
+                if (k === 37 && navIdx > 0) navIdx--;
+                else if (k === 39 && navIdx < 5) navIdx++;
+                else if (k === 40) zone = 'input';
+                else if (k === 13) window.location.href = document.querySelectorAll('.tv-nav-item, .navbar-logo')[navIdx].getAttribute('href');
+            } else {
+                if (k === 38) {
+                    if (index > 0) index--;
+                    else zone = 'nav';
+                }
+                else if (k === 40 && index < items.length - 1) index++;
+                else if (k === 13) {
+                    if (index === 2) performLogin();
+                    else if (index === 3) window.location.href = 'register.html';
+                }
             }
-            else if (k === 461 || k === 8) {
-                window.location.href = 'index.html';
-            }
+
+            if (k === 461 || k === 8) { window.location.href = 'index.html'; }
             updateFocus();
         };
 
@@ -67,6 +110,7 @@
             var email = document.getElementById('email').value;
             var pass = document.getElementById('password').value;
             var err = document.getElementById('error-msg');
+            if (!email || !pass) { err.innerHTML = "Enter email and password"; return; }
 
             var xhr = new XMLHttpRequest();
             xhr.open('POST', '/api/auth/login', true);

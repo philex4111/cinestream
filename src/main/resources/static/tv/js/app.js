@@ -1,4 +1,4 @@
-﻿/* CineStream TV: Advanced ES5 Focus Engine for LG NetCast 4.0 (Mirrored from static/index.html) */
+﻿/* CineStream TV: ES5 Focus Engine - Advanced Site Parity */
 var TVApp = {
     zone: 'rail', // 'nav', 'hero', 'rail', 'tab'
     navIdx: 1, heroIdx: 0, railIdx: 0, cardIdx: 0, tabIdx: 0,
@@ -25,12 +25,12 @@ var TVApp = {
             else if (k === 40) self.move('down');
             else if (k === 13) self.enter();
             else if (k === 461 || k === 8) { e.preventDefault(); self.back(); }
-            self.stopHeroCycle(); // Pause auto-slide on interaction
+            self.stopHeroCycle();
         };
     },
 
     loadContent: function() {
-        var self = this;
+        var self = this, loaded = 0;
         var sources = [
             ['/tmdb/trending?time=day', 'top10'],
             ['/tmdb/trending?time=week', 'trending_all'],
@@ -38,7 +38,6 @@ var TVApp = {
             ['/tmdb/tv/popular', 'tv']
         ];
 
-        var loaded = 0;
         for (var i = 0; i < sources.length; i++) {
             (function(src, key) {
                 var xhr = new XMLHttpRequest();
@@ -47,7 +46,6 @@ var TVApp = {
                     if (xhr.readyState === 4 && xhr.status === 200) {
                         var results = JSON.parse(xhr.responseText).results;
                         self.data[key] = results;
-
                         if (key === 'trending_all') {
                             self.heroItems = results.slice(0, 8);
                             self.renderHeroDots();
@@ -55,13 +53,8 @@ var TVApp = {
                         } else {
                             self.renderRail(key, results);
                         }
-
                         loaded++;
-                        if (loaded === 4) {
-                            self.status('');
-                            self.updateFocus();
-                            self.setHero(self.heroItems[0]);
-                        }
+                        if (loaded === 4) { self.status(''); self.updateFocus(); self.setHero(self.heroItems[0]); }
                     }
                 };
                 xhr.send();
@@ -70,8 +63,7 @@ var TVApp = {
     },
 
     filterTrending: function() {
-        var all = this.data['trending_all'] || [];
-        var filtered = [];
+        var all = this.data['trending_all'] || [], filtered = [];
         for (var i = 0; i < all.length; i++) {
             if (this.currentTab === 'movie' && (all[i].media_type === 'movie' || !all[i].media_type)) filtered.push(all[i]);
             if (this.currentTab === 'tv' && all[i].media_type === 'tv') filtered.push(all[i]);
@@ -97,27 +89,20 @@ var TVApp = {
 
     renderHeroDots: function() {
         var dots = document.getElementById('hero-dots');
+        if (!dots) return;
         var html = '';
-        for (var i = 0; i < this.heroItems.length; i++) {
-            html += '<div class="hero-dot" id="dot-' + i + '"></div>';
-        }
+        for (var i = 0; i < this.heroItems.length; i++) html += '<div class="hero-dot" id="dot-' + i + '"></div>';
         dots.innerHTML = html;
     },
 
     setHero: function(item) {
         if (!item) return;
-        this.currentHeroItem = item;
         document.getElementById('hero-title').innerHTML = item.title || item.name;
         document.getElementById('hero-overview').innerHTML = (item.overview || "").substring(0, 220) + "...";
-
         var year = (item.release_date || item.first_air_date || '').substring(0, 4);
         var rate = item.vote_average ? '★ ' + item.vote_average.toFixed(1) : '–';
         document.getElementById('hero-meta').innerHTML = '<span style="color:#E50914;font-weight:700;">' + rate + '</span><span class="dot"></span><span>' + year + '</span>';
-
-        if (item.backdrop_path) {
-            document.getElementById('hero').style.backgroundImage = "url('https://image.tmdb.org/t/p/w1280" + item.backdrop_path + "')";
-        }
-
+        if (item.backdrop_path) document.getElementById('hero').style.backgroundImage = "url('https://image.tmdb.org/t/p/w1280" + item.backdrop_path + "')";
         var dots = document.getElementsByClassName('hero-dot');
         for(var i=0; i<dots.length; i++) dots[i].className = 'hero-dot';
         var activeDot = document.getElementById('dot-' + this.heroIdx);
@@ -134,14 +119,11 @@ var TVApp = {
         }, 7000);
     },
 
-    stopHeroCycle: function() {
-        clearInterval(this.heroTimer);
-        this.startHeroCycle(); // Restart timer to reset the 7s countdown
-    },
+    stopHeroCycle: function() { clearInterval(this.heroTimer); this.startHeroCycle(); },
 
     move: function(dir) {
         if (this.zone === 'nav') {
-            if (dir === 'right' && this.navIdx < 5) this.navIdx++;
+            if (dir === 'right' && this.navIdx < 4) this.navIdx++;
             else if (dir === 'left' && this.navIdx > 0) this.navIdx--;
             else if (dir === 'down') this.zone = 'hero';
         }
@@ -152,19 +134,20 @@ var TVApp = {
             else if (dir === 'left' && this.heroIdx > 0) this.heroIdx--;
         }
         else if (this.zone === 'tab') {
-            if (dir === 'right' && this.tabIdx < 1) this.tabIdx++;
+            if (dir === 'up') { this.zone = 'rail'; this.railIdx = 0; }
+            else if (dir === 'down') { this.zone = 'rail'; this.railIdx = 1; this.cardIdx = 0; }
+            else if (dir === 'right' && this.tabIdx < 1) this.tabIdx++;
             else if (dir === 'left' && this.tabIdx > 0) this.tabIdx--;
-            else if (dir === 'up') this.zone = 'rail'; // Go back to top10
-            else if (dir === 'down') { this.zone = 'rail'; this.cardIdx = 0; }
         }
         else if (this.zone === 'rail') {
             if (dir === 'up') {
-                if (this.railIdx === 1) { this.zone = 'tab'; } // Reach tabs from Trending
+                if (this.railIdx === 1) this.zone = 'tab';
                 else if (this.railIdx > 0) { this.railIdx--; this.cardIdx = 0; }
                 else this.zone = 'hero';
             }
             else if (dir === 'down') {
-                if (this.railIdx < this.rails.length - 1) { this.railIdx++; this.cardIdx = 0; }
+                if (this.railIdx === 0) this.zone = 'tab';
+                else if (this.railIdx < this.rails.length - 1) { this.railIdx++; this.cardIdx = 0; }
             }
             else if (dir === 'right') {
                 var max = (this.data[this.rails[this.railIdx]] || []).length - 1;
@@ -183,12 +166,14 @@ var TVApp = {
         for(var i=0; i<all.length; i++) { all[i].classList.remove('tv-focused'); all[i].classList.remove('tv-nav-focused'); }
 
         if (this.zone === 'nav') {
-            var navItems = document.querySelectorAll('.tv-nav-item, .navbar-logo');
-            if (navItems[this.navIdx]) navItems[this.navIdx].classList.add('tv-nav-focused');
+            var items = document.querySelectorAll('.tv-nav-item, .navbar-logo');
+            if (items[this.navIdx]) items[this.navIdx].classList.add('tv-nav-focused');
         }
         else if (this.zone === 'hero') {
             var btns = document.querySelectorAll('.hero-actions .btn');
             if (btns[this.heroIdx]) btns[this.heroIdx].classList.add('tv-focused');
+            document.getElementById('hero').style.transform = 'translateY(0)';
+            document.getElementById('tv-rails').style.transform = 'translateY(0)';
         }
         else if (this.zone === 'tab') {
             var tabs = document.querySelectorAll('.tab-tv');
@@ -199,11 +184,10 @@ var TVApp = {
             var card = document.getElementById('card-' + key + '-' + this.cardIdx);
             if (card) {
                 card.classList.add('tv-focused');
-                var slider = document.getElementById('slider-' + key);
-                slider.style.transform = 'translateX(-' + (this.cardIdx * 220) + 'px)';
-                document.getElementById('tv-rails').style.transform = 'translateY(-' + (this.railIdx * 320) + 'px)';
-
-                // Mirror dynamic hero logic: update background to focused card
+                document.getElementById('slider-' + key).style.transform = 'translateX(-' + (this.cardIdx * 220) + 'px)';
+                var shift = Math.min(300, (this.railIdx + 1) * 120);
+                document.getElementById('hero').style.transform = 'translateY(-' + shift + 'px)';
+                document.getElementById('tv-rails').style.transform = 'translateY(-' + (this.railIdx * 320 + (this.railIdx > 0 ? 80 : 0)) + 'px)';
                 var item = this.data[key][this.cardIdx];
                 if (item) this.setHero(item);
             }
@@ -211,39 +195,20 @@ var TVApp = {
     },
 
     enter: function() {
-        if (this.zone === 'nav') {
-            var links = document.querySelectorAll('.tv-nav-item, .navbar-logo');
-            window.location.href = links[this.navIdx].getAttribute('href');
-        }
+        if (this.zone === 'nav') window.location.href = document.querySelectorAll('.tv-nav-item, .navbar-logo')[this.navIdx].getAttribute('href');
         else if (this.zone === 'tab') {
             var tabs = document.querySelectorAll('.tab-tv');
             this.currentTab = tabs[this.tabIdx].getAttribute('data-tab');
             for(var i=0; i<tabs.length; i++) tabs[i].className = 'tab-tv';
             tabs[this.tabIdx].className = 'tab-tv active';
             this.filterTrending();
-        }
-        else {
-            var item = null;
-            if (this.zone === 'hero') item = this.heroItems[this.heroIdx];
-            else item = this.data[this.rails[this.railIdx]][this.cardIdx];
-
-            if (item) {
-                var type = item.media_type || (item.first_air_date ? 'tv' : 'movie');
-                window.location.href = 'detail.html?id=' + item.id + '&type=' + type;
-            }
+        } else {
+            var item = this.zone === 'hero' ? this.heroItems[this.heroIdx] : this.data[this.rails[this.railIdx]][this.cardIdx];
+            if (item) window.location.href = 'detail.html?id=' + item.id + '&type=' + (item.media_type || (item.first_air_date ? 'tv' : 'movie'));
         }
     },
 
-    back: function() {
-        if (this.zone !== 'nav') { this.zone = 'nav'; this.navIdx = 1; this.updateFocus(); }
-        else window.location.href = 'index.html';
-    },
-
-    status: function(msg) {
-        var el = document.getElementById('tv-status');
-        el.innerHTML = msg;
-        el.className = msg ? 'tv-status' : 'tv-status hidden';
-    }
+    back: function() { if (this.zone !== 'nav') { this.zone = 'nav'; this.navIdx = 1; this.updateFocus(); } else window.location.href = 'index.html'; },
+    status: function(m) { var el = document.getElementById('tv-status'); if (el) { el.innerHTML = m; el.className = m ? 'tv-status' : 'tv-status hidden'; } }
 };
-
 window.onload = function() { TVApp.init(); };

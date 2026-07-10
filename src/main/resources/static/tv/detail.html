@@ -5,65 +5,134 @@
     <title>CineStream TV — Details</title>
     <link rel="stylesheet" href="../css/main.css">
     <link rel="stylesheet" href="css/tv.css">
+    <style>
+        /* ── TV-Optimized Full-Width Detail Styles (Parallax + Logic Parity) ── */
+        .tv-shell { background: #050505; height: 100vh; overflow: hidden; position: relative; width: 1280px; }
+
+        .parallax-backdrop {
+            position: absolute; top: 0; left: 0; right: 0; height: 100vh;
+            background-size: cover; background-position: center top;
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            z-index: 1;
+        }
+        .parallax-backdrop::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(to right, rgba(10,10,10,0.98) 40%, rgba(10,10,10,0.3) 80%, transparent),
+                        linear-gradient(to top, rgba(10,10,10,1) 0%, rgba(10,10,10,0.4) 40%, transparent 80%);
+        }
+
+        .stage-scroller {
+            position: relative; z-index: 10; height: 100%;
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .detail-hero-content { padding: 100px 64px 48px; max-width: 850px; }
+        .hero-badge-tv { color: var(--crimson); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; }
+        .hero-title-tv { font-size: 64px; line-height: 1; margin-bottom: 15px; font-family: 'Bebas Neue', Arial, sans-serif; }
+        .hero-meta-tv { display: flex; gap: 15px; align-items: center; color: var(--grey-2); font-size: 18px; margin-bottom: 25px; }
+        .rating-tv { color: var(--crimson); font-weight: 700; }
+        .genre-list-tv { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 25px; }
+        .genre-tag-tv { background: var(--grey-4); padding: 4px 12px; border-radius: 4px; font-size: 14px; }
+        .hero-overview-tv { font-size: 19px; line-height: 1.6; color: var(--grey-1); margin-bottom: 35px; max-width: 680px; }
+
+        .hero-actions-tv { display: flex; gap: 15px; margin-bottom: 40px; }
+        .btn-tv { padding: 14px 35px; font-size: 18px; font-weight: 700; border-radius: 50px; border: 3px solid transparent; }
+        .btn-tv.tv-focused { border-color: #fff; transform: scale(1.05); }
+
+        /* Stats Row (Mirroring Site) */
+        .stats-row-tv { display: flex; gap: 48px; padding: 32px 64px; border-bottom: 1px solid var(--grey-4); background: rgba(15,15,15,0.7); }
+        .stat-item-tv { display: flex; flex-direction: column; gap: 6px; }
+        .stat-label-tv { font-size: 11px; font-weight: 700; color: var(--grey-3); text-transform: uppercase; letter-spacing: 1px; }
+        .stat-value-tv { font-size: 17px; font-weight: 600; color: #fff; }
+
+        /* Vertical Episode List (Mirroring Site) */
+        .vertical-section { padding: 48px 64px; }
+        .ep-list-tv { display: flex; flex-direction: column; gap: 8px; }
+        .ep-item-tv {
+            display: flex; gap: 24px; padding: 18px; background: rgba(255,255,255,0.03);
+            border-radius: 12px; border: 3px solid transparent; transition: all 0.3s;
+        }
+        .ep-item-tv.tv-focused { border-color: #fff; background: rgba(255,255,255,0.08); transform: scale(1.02); }
+        .ep-thumb-tv { width: 220px; aspect-ratio: 16/9; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+        .ep-info-tv { flex: 1; min-width: 0; }
+        .ep-title-tv { font-size: 19px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+        .ep-desc-tv { font-size: 14px; color: var(--grey-2); line-height: 1.5; height: 42px; overflow: hidden; white-space: normal; }
+
+        /* Horizontal Sliders (Cast/Similar) */
+        .slider-tv { display: flex; gap: 24px; transition: transform 0.4s ease-out; }
+        .cast-card-tv { width: 110px; text-align: center; flex-shrink: 0; }
+        .cast-img-tv { width: 85px; height: 85px; border-radius: 50%; object-fit: cover; margin: 0 auto 12px; border: 3px solid var(--grey-4); }
+        .cast-card-tv.tv-focused .cast-img-tv { border-color: #fff; transform: scale(1.1); }
+        .sim-card-tv { width: 180px; flex-shrink: 0; border: 4px solid transparent; border-radius: 8px; overflow: hidden; }
+        .sim-card-tv.tv-focused { border-color: #fff; transform: scale(1.08); }
+
+        .season-select-tv { padding: 10px 20px; background: var(--bg-elevated); border: 2px solid transparent; border-radius: 4px; color: #fff; font-weight: 700; }
+        .season-select-tv.tv-focused { border-color: var(--crimson); }
+    </style>
 </head>
 <body>
     <div class="tv-shell">
-        <nav class="tv-navbar" id="tv-navbar">
-            <a href="index.html" class="navbar-logo" data-nav="logo">CineStream</a>
+        <div id="parallax-backdrop" class="parallax-backdrop"></div>
+
+        <nav class="tv-navbar" id="tv-navbar" style="z-index: 100;">
+            <a href="index.html" class="navbar-logo">CineStream</a>
             <div class="navbar-links">
-                <a href="index.html" class="tv-nav-item" data-nav="home">Home</a>
-                <a href="browse.html" class="tv-nav-item" data-nav="browse">Browse</a>
-                <a href="watchlist.html" class="tv-nav-item" data-nav="watchlist">Watchlist</a>
-                <a href="search.html" class="tv-nav-item" data-nav="search">Search</a>
-                <a href="login.html" class="tv-nav-item" data-nav="login">Sign In</a>
+                <a href="index.html" class="tv-nav-item">Home</a>
+                <a href="browse.html" class="tv-nav-item">Browse</a>
+                <a href="watchlist.html" class="tv-nav-item">Watchlist</a>
+                <a href="search.html" class="tv-nav-item">Search</a>
+                <a href="login.html" class="tv-nav-item">Sign In</a>
             </div>
         </nav>
 
-        <div class="tv-stage" id="detail-scroller" style="overflow-y: hidden;">
-            <div id="hero" class="tv-hero">
-                <div class="hero-backdrop-overlay"></div>
-                <div class="hero-content">
-                    <div class="hero-badge" id="type-badge">Movie</div>
-                    <h1 class="hero-title" id="title">Loading...</h1>
-                    <div class="hero-meta" id="meta"></div>
-                    <p class="hero-overview" id="overview"></p>
-                    <div class="hero-actions" id="main-actions">
-                        <a id="play-btn" class="btn btn-primary">▶ Play</a>
-                        <button id="watchlist-btn" class="btn btn-secondary">Add to Watchlist</button>
-                    </div>
+        <div class="stage-scroller" id="main-scroller">
+            <!-- Hero mirroring desktop detail.html -->
+            <div class="detail-hero-content">
+                <div class="hero-badge-tv" id="type-badge"></div>
+                <h1 class="hero-title-tv" id="title">Loading...</h1>
+                <div class="hero-meta-tv" id="meta"></div>
+                <div class="genre-list-tv" id="genres"></div>
+                <p class="hero-overview-tv" id="overview"></p>
+
+                <div class="hero-actions-tv" id="main-actions">
+                    <a id="play-btn" class="btn btn-primary btn-tv tv-focusable">▶ Play</a>
+                    <button id="watchlist-btn" class="btn btn-secondary btn-tv tv-focusable">Add to Watchlist</button>
                 </div>
             </div>
 
-            <div class="tv-rails-container" style="top: 450px;">
-                <div class="tv-rails-scroller" id="detail-rails">
-                    <!-- Stats Section -->
-                    <section class="tv-section" id="stats-section" style="height: 120px;">
-                        <div id="stats-row" style="display:flex; gap:40px;"></div>
-                    </section>
+            <!-- Stats mirroring desktop -->
+            <div class="stats-row-tv" id="stats-row"></div>
 
-                    <!-- Episodes -->
-                    <section class="tv-section" id="episodes-section" style="display:none; height: 350px;">
-                        <h2 class="section-title">Episodes</h2>
-                        <div class="slider-wrap"><div class="tv-slider" id="ep-grid"></div></div>
-                    </section>
-
-                    <!-- Similar -->
-                    <section class="tv-section" id="similar-section" style="display:none; height: 350px;">
-                        <h2 class="section-title">More Like This</h2>
-                        <div class="slider-wrap"><div class="tv-slider" id="similar-grid"></div></div>
-                    </section>
-                </div>
+            <!-- Cast Section -->
+            <div class="vertical-section" id="cast-section" style="display:none;">
+                <h2 class="section-title" style="margin-bottom:20px; color:#fff;">Cast</h2>
+                <div class="slider-tv" id="cast-slider"></div>
             </div>
+
+            <!-- Episodes Section (Vertical) -->
+            <div class="vertical-section" id="episodes-section" style="display:none;">
+                <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <h2 class="section-title" style="margin-bottom:0; color:#fff;">Episodes</h2>
+                    <div id="season-selector" class="season-select-tv tv-focusable">Season 1</div>
+                </div>
+                <div class="ep-list-tv" id="ep-list"></div>
+            </div>
+
+            <!-- Similar mirroring desktop -->
+            <div class="vertical-section" id="similar-section" style="display:none;">
+                <h2 class="section-title" style="margin-bottom:20px; color:#fff;">More Like This</h2>
+                <div class="slider-tv" id="similar-slider"></div>
+            </div>
+
+            <div style="height: 300px;"></div>
         </div>
     </div>
 
     <script>
         var params = new URLSearchParams(window.location.search);
         var id = params.get('id'), type = params.get('type') || 'movie';
-        var zone = 'hero', navIdx = 0, heroIdx = 0, railIdx = 0, cardIdx = 0;
-        var sections = ['stats', 'episodes', 'similar'];
-        var activeSections = ['stats'];
-        var episodesData = [], similarData = [];
+        var focusZone = 'hero', navIdx = 0, heroIdx = 0, castIdx = 0, epIdx = 0, simIdx = 0, seasonNum = 1;
+        var inWatchlist = false, castData = [], episodesData = [], similarData = [];
 
         function load() {
             var xhr = new XMLHttpRequest();
@@ -72,6 +141,28 @@
                 if (xhr.readyState === 4 && xhr.status === 200) {
                     var data = JSON.parse(xhr.responseText);
                     render(data);
+                    checkWatchlist();
+                }
+            };
+            xhr.send();
+        }
+
+        function checkWatchlist() {
+            var token = localStorage.getItem('token');
+            if (!token) return;
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/api/watchlist', true);
+            xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var list = JSON.parse(xhr.responseText);
+                    for (var i = 0; i < list.length; i++) {
+                        if (list[i].tmdbId == id && list[i].mediaType === type) {
+                            inWatchlist = true;
+                            document.getElementById('watchlist-btn').innerHTML = 'Remove from Watchlist';
+                            break;
+                        }
+                    }
                 }
             };
             xhr.send();
@@ -79,19 +170,40 @@
 
         function render(data) {
             document.getElementById('title').innerHTML = data.title || data.name;
-            document.getElementById('overview').innerHTML = (data.overview || "").substring(0, 250) + "...";
-            document.getElementById('hero').style.backgroundImage = "url('https://image.tmdb.org/t/p/w1280" + data.backdrop_path + "')";
-            document.getElementById('type-badge').innerHTML = type.toUpperCase();
+            document.getElementById('overview').innerHTML = (data.overview || "");
+            document.getElementById('parallax-backdrop').style.backgroundImage = "url('https://image.tmdb.org/t/p/w1280" + data.backdrop_path + "')";
+            document.getElementById('type-badge').innerHTML = (type === 'tv' ? '📺 TV SERIES' : '🎬 MOVIE');
 
             var year = (data.release_date || data.first_air_date || '').substring(0, 4);
-            var rate = data.vote_average ? '★ ' + data.vote_average.toFixed(1) : '';
-            document.getElementById('meta').innerHTML = '<span>' + rate + '</span><span>' + year + '</span>';
+            var rate = data.vote_average ? '★ ' + data.vote_average.toFixed(1) : '–';
+            document.getElementById('meta').innerHTML = '<span class="rating-tv">' + rate + '</span><span> • ' + year + '</span>' + (data.runtime ? '<span> • ' + data.runtime + 'm</span>' : '');
 
-            var stats = '<div class="stat-item-tv"><span class="stat-label-tv">Status</span><span class="stat-value-tv">' + (data.status || 'N/A') + '</span></div>';
-            if (data.runtime) stats += '<div class="stat-item-tv"><span class="stat-label-tv">Runtime</span><span class="stat-value-tv">' + data.runtime + 'm</span></div>';
+            if (data.genres) {
+                var gHtml = '';
+                for (var i = 0; i < data.genres.length; i++) gHtml += '<span class="genre-tag-tv">' + data.genres[i].name + '</span>';
+                document.getElementById('genres').innerHTML = gHtml;
+            }
+
+            var stats = '<div class="stat-item-tv"><span class="stat-label-tv">Rating</span><span class="stat-value-tv" style="color:var(--crimson)">★ ' + rate + ' / 10</span></div>';
+            stats += '<div class="stat-item-tv"><span class="stat-label-tv">Year</span><span class="stat-value-tv">' + year + '</span></div>';
+            if (data.status) stats += '<div class="stat-item-tv"><span class="stat-label-tv">Status</span><span class="stat-value-tv">' + data.status + '</span></div>';
+            if (data.number_of_episodes) stats += '<div class="stat-item-tv"><span class="stat-label-tv">Episodes</span><span class="stat-value-tv">' + data.number_of_episodes + '</span></div>';
             document.getElementById('stats-row').innerHTML = stats;
 
             document.getElementById('play-btn').href = 'player.html?id=' + id + '&type=' + type;
+
+            if (data.credits && data.credits.cast) {
+                castData = data.credits.cast.slice(0, 15);
+                if (castData.length) {
+                    document.getElementById('cast-section').style.display = 'block';
+                    var cHtml = '';
+                    for (var i = 0; i < castData.length; i++) {
+                        var img = castData[i].profile_path ? 'https://image.tmdb.org/t/p/w185' + castData[i].profile_path : '';
+                        cHtml += '<div class="cast-card-tv" id="cast-' + i + '"><img class="cast-img-tv" src="' + img + '"><div style="font-size:13px; color:#fff;">' + castData[i].name + '</div></div>';
+                    }
+                    document.getElementById('cast-slider').innerHTML = cHtml;
+                }
+            }
 
             if (type === 'tv') loadEpisodes();
             loadSimilar();
@@ -100,21 +212,22 @@
 
         function loadEpisodes() {
             var xhr = new XMLHttpRequest();
-            xhr.open('GET', '/api/tmdb/tv/' + id + '/season/1', true);
+            xhr.open('GET', '/api/tmdb/tv/' + id + '/season/' + seasonNum, true);
             xhr.onreadystatechange = function() {
                 if (xhr.readyState === 4 && xhr.status === 200) {
                     episodesData = JSON.parse(xhr.responseText).episodes || [];
                     if (episodesData.length) {
                         document.getElementById('episodes-section').style.display = 'block';
-                        activeSections.push('episodes');
                         var html = '';
                         for (var i = 0; i < episodesData.length; i++) {
-                            html += '<div class="tv-card" id="card-episodes-' + i + '">' +
-                                    '<img class="card-poster" src="https://image.tmdb.org/t/p/w300' + episodesData[i].still_path + '">' +
-                                    '<div class="card-overlay"><div class="card-overlay-title">Ep ' + episodesData[i].episode_number + '</div></div>' +
-                                    '</div>';
+                            var ep = episodesData[i];
+                            var thumb = ep.still_path ? 'https://image.tmdb.org/t/p/w300' + ep.still_path : '';
+                            html += '<div class="ep-item-tv" id="ep-' + i + '">' +
+                                    '<img class="ep-thumb-tv" src="' + thumb + '">' +
+                                    '<div class="ep-info-tv"><div class="ep-title-tv">' + ep.episode_number + '. ' + ep.name + '</div>' +
+                                    '<div class="ep-desc-tv">' + (ep.overview || '') + '</div></div></div>';
                         }
-                        document.getElementById('ep-grid').innerHTML = html;
+                        document.getElementById('ep-list').innerHTML = html;
                     }
                 }
             };
@@ -129,14 +242,11 @@
                     similarData = JSON.parse(xhr.responseText).results || [];
                     if (similarData.length) {
                         document.getElementById('similar-section').style.display = 'block';
-                        activeSections.push('similar');
                         var html = '';
                         for (var i = 0; i < similarData.length; i++) {
-                            html += '<div class="tv-card" id="card-similar-' + i + '">' +
-                                    '<img class="card-poster" src="https://image.tmdb.org/t/p/w342' + similarData[i].poster_path + '">' +
-                                    '</div>';
+                            html += '<div class="sim-card-tv" id="sim-' + i + '"><img src="https://image.tmdb.org/t/p/w342' + similarData[i].poster_path + '" style="width:100%"></div>';
                         }
-                        document.getElementById('similar-grid').innerHTML = html;
+                        document.getElementById('similar-slider').innerHTML = html;
                     }
                 }
             };
@@ -147,64 +257,77 @@
             var all = document.querySelectorAll('.tv-focused, .tv-nav-focused');
             for(var i=0; i<all.length; i++) { all[i].classList.remove('tv-focused'); all[i].classList.remove('tv-nav-focused'); }
 
-            if (zone === 'nav') {
+            var scroller = document.getElementById('main-scroller');
+            var bg = document.getElementById('parallax-backdrop');
+
+            if (focusZone === 'nav') {
                 var items = document.querySelectorAll('.tv-nav-item, .navbar-logo');
                 if (items[navIdx]) items[navIdx].classList.add('tv-nav-focused');
-            } else if (zone === 'hero') {
-                var btns = document.querySelectorAll('#main-actions .btn');
+                scroller.style.transform = 'translateY(0)';
+                bg.style.transform = 'translateY(0)';
+            } else if (focusZone === 'hero') {
+                var btns = document.querySelectorAll('#main-actions .tv-focusable');
                 if (btns[heroIdx]) btns[heroIdx].classList.add('tv-focused');
-                document.getElementById('detail-rails').style.transform = 'translateY(0)';
-            } else if (zone === 'rail') {
-                var key = activeSections[railIdx];
-                if (key === 'stats') {
-                    // Stats section has no cards, just visual
-                    zone = 'hero'; updateFocus(); return;
+                scroller.style.transform = 'translateY(0)';
+                bg.style.transform = 'translateY(0)';
+            } else if (focusZone === 'cast') {
+                var item = document.getElementById('cast-' + castIdx);
+                if (item) item.classList.add('tv-focused');
+                document.getElementById('cast-slider').style.transform = 'translateX(-' + (castIdx * 134) + 'px)';
+                scroller.style.transform = 'translateY(-350px)';
+                bg.style.transform = 'translateY(-100px)';
+            } else if (focusZone === 'episodes') {
+                if (heroIdx === 0) { // Season btn
+                    document.getElementById('season-selector').classList.add('tv-focused');
+                    scroller.style.transform = 'translateY(-550px)';
+                } else { // Ep list
+                    var item = document.getElementById('ep-' + epIdx);
+                    if (item) item.classList.add('tv-focused');
+                    scroller.style.transform = 'translateY(-' + (650 + epIdx * 105) + 'px)';
                 }
-                var card = document.getElementById('card-' + key + '-' + cardIdx);
-                if (card) {
-                    card.classList.add('tv-focused');
-                    document.getElementById(key === 'episodes' ? 'ep-grid' : 'similar-grid').style.transform = 'translateX(-' + (cardIdx * 220) + 'px)';
-                    document.getElementById('detail-rails').style.transform = 'translateY(-' + (railIdx * 320) + 'px)';
-                }
+                bg.style.transform = 'translateY(-200px)';
+            } else if (focusZone === 'similar') {
+                var item = document.getElementById('sim-' + simIdx);
+                if (item) item.classList.add('tv-focused');
+                document.getElementById('similar-slider').style.transform = 'translateX(-' + (simIdx * 204) + 'px)';
+                scroller.style.transform = 'translateY(-900px)';
+                bg.style.transform = 'translateY(-300px)';
             }
         }
 
         document.onkeydown = function(e) {
             var k = e.keyCode || e.which;
             if (k === 37) { // Left
-                if (zone === 'nav' && navIdx > 0) navIdx--;
-                else if (zone === 'hero' && heroIdx > 0) heroIdx--;
-                else if (zone === 'rail' && cardIdx > 0) cardIdx--;
+                if (focusZone === 'nav' && navIdx > 0) navIdx--;
+                else if (focusZone === 'hero' && heroIdx > 0) heroIdx--;
+                else if (focusZone === 'cast' && castIdx > 0) castIdx--;
+                else if (focusZone === 'similar' && simIdx > 0) simIdx--;
             } else if (k === 39) { // Right
-                if (zone === 'nav' && navIdx < 5) navIdx++;
-                else if (zone === 'hero' && heroIdx < 1) heroIdx++;
-                else if (zone === 'rail') {
-                    var max = (activeSections[railIdx] === 'episodes' ? episodesData.length : similarData.length) - 1;
-                    if (cardIdx < max) cardIdx++;
-                }
+                if (focusZone === 'nav' && navIdx < 5) navIdx++;
+                else if (focusZone === 'hero' && heroIdx < 1) heroIdx++;
+                else if (focusZone === 'cast' && castIdx < castData.length - 1) castIdx++;
+                else if (focusZone === 'similar' && simIdx < similarData.length - 1) simIdx++;
             } else if (k === 38) { // Up
-                if (zone === 'hero') zone = 'nav';
-                else if (zone === 'rail') {
-                    if (railIdx > 1) railIdx--; // Jump over stats which is index 0
-                    else zone = 'hero';
-                }
+                if (focusZone === 'hero') focusZone = 'nav';
+                else if (focusZone === 'cast') focusZone = 'hero';
+                else if (focusZone === 'episodes') {
+                    if (heroIdx === 1 && epIdx > 0) epIdx--;
+                    else if (heroIdx === 1) heroIdx = 0;
+                    else focusZone = castData.length ? 'cast' : 'hero';
+                } else if (focusZone === 'similar') focusZone = episodesData.length ? 'episodes' : (castData.length ? 'cast' : 'hero');
             } else if (k === 40) { // Down
-                if (zone === 'nav') zone = 'hero';
-                else if (zone === 'hero') {
-                    if (activeSections.length > 1) { zone = 'rail'; railIdx = 1; cardIdx = 0; }
-                } else if (zone === 'rail' && railIdx < activeSections.length - 1) {
-                    railIdx++; cardIdx = 0;
+                if (focusZone === 'nav') focusZone = 'hero';
+                else if (focusZone === 'hero') focusZone = castData.length ? 'cast' : (episodesData.length ? 'episodes' : 'similar');
+                else if (focusZone === 'cast') focusZone = episodesData.length ? 'episodes' : 'similar';
+                else if (focusZone === 'episodes') {
+                    if (heroIdx === 0) { heroIdx = 1; epIdx = 0; }
+                    else if (epIdx < episodesData.length - 1) epIdx++;
+                    else focusZone = 'similar';
                 }
             } else if (k === 13) { // Enter
-                if (zone === 'nav') {
-                    window.location.href = document.querySelectorAll('.tv-nav-item, .navbar-logo')[navIdx].getAttribute('href');
-                } else if (zone === 'hero') {
-                    if (heroIdx === 0) window.location.href = document.getElementById('play-btn').href;
-                } else if (zone === 'rail') {
-                    var key = activeSections[railIdx];
-                    if (key === 'episodes') window.location.href = 'player.html?id=' + id + '&type=tv&season=1&episode=' + episodesData[cardIdx].episode_number;
-                    else if (key === 'similar') window.location.href = 'detail.html?id=' + similarData[cardIdx].id + '&type=' + (similarData[cardIdx].media_type || type);
-                }
+                if (focusZone === 'nav') window.location.href = document.querySelectorAll('.tv-nav-item, .navbar-logo')[navIdx].getAttribute('href');
+                else if (focusZone === 'hero' && heroIdx === 0) window.location.href = document.getElementById('play-btn').href;
+                else if (focusZone === 'episodes' && heroIdx === 1) window.location.href = 'player.html?id=' + id + '&type=tv&season=' + seasonNum + '&episode=' + episodesData[epIdx].episode_number;
             } else if (k === 461 || k === 8) { window.location.href = 'index.html'; }
             updateFocus();
         };

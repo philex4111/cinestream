@@ -5,9 +5,14 @@
     <title>CineStream TV</title>
     <link rel="stylesheet" href="../css/main.css">
     <link rel="stylesheet" href="css/tv.css">
+    <style>
+        .tv-shell { overflow: hidden; height: 100vh; width: 100vw; position: relative; }
+        .tv-hero { transition: transform 0.5s ease-out; }
+        .tv-rails-scroller { transition: transform 0.5s ease-out; }
+    </style>
 </head>
 <body>
-    <div class="tv-shell">
+    <div class="tv-shell" id="tv-shell">
         <nav class="tv-navbar" id="tv-navbar">
             <a href="index.html" class="navbar-logo" data-nav="logo">CineStream</a>
             <div class="navbar-links">
@@ -20,7 +25,6 @@
         </nav>
 
         <main class="tv-stage">
-            <!-- Hero Slider -->
             <section class="tv-hero" id="hero">
                 <div class="hero-backdrop-overlay"></div>
                 <div class="hero-content">
@@ -38,13 +42,13 @@
 
             <div class="tv-rails-container">
                 <div class="tv-rails-scroller" id="tv-rails">
-                    <!-- Top 10 -->
+                    <!-- Top 10 Today -->
                     <section class="tv-section" id="section-top10">
                         <h2 class="section-title">Top 10 Today</h2>
                         <div class="slider-wrap"><div class="tv-slider" id="slider-top10"></div></div>
                     </section>
 
-                    <!-- Trending Today (with tabs) -->
+                    <!-- Trending Today (Tabs) -->
                     <section class="tv-section" id="section-trending">
                         <div class="section-header" style="display:flex; align-items:center; gap:30px; margin-bottom:15px;">
                             <h2 class="section-title" style="margin-bottom:0;">Trending Today</h2>
