@@ -1,79 +1,9 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CineStream TV</title>
-    <link rel="stylesheet" href="css/tv.css">
-</head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>CineStream TV</title><link rel="stylesheet" href="../css/main.css"><link rel="stylesheet" href="css/tv.css"></head>
 <body>
-<div class="tv-app">
-    <aside class="side-nav" aria-label="Main navigation">
-        <div class="brand">
-            <span class="brand-mark">C</span>
-            <span class="brand-name">CineStream</span>
-        </div>
-
-        <div class="nav-items">
-            <button class="nav-item focused" data-nav="home">
-                <span class="nav-icon">&#8962;</span><span>Home</span>
-            </button>
-            <button class="nav-item" data-nav="search">
-                <span class="nav-icon">&#9906;</span><span>Search</span>
-            </button>
-            <button class="nav-item" data-nav="movies">
-                <span class="nav-icon">&#9654;</span><span>Movies</span>
-            </button>
-            <button class="nav-item" data-nav="series">
-                <span class="nav-icon">&#9776;</span><span>TV Shows</span>
-            </button>
-        </div>
-
-        <div class="nav-hint">Use your remote<br>to browse</div>
-    </aside>
-
-    <main class="content">
-        <section class="hero" id="hero">
-            <div class="hero-shade"></div>
-
-            <div class="hero-copy">
-                <div class="eyebrow">CINESTREAM FEATURED</div>
-                <h1 id="hero-title">Loading your next great watch</h1>
-                <div class="hero-meta" id="hero-meta"></div>
-                <p id="hero-overview">
-                    Please wait while we bring the latest movies and shows to your screen.
-                </p>
-
-                <div class="hero-actions">
-                    <button class="hero-play" id="hero-play">
-                        <span>&#9654;</span> Play
-                    </button>
-                    <button class="hero-info" id="hero-info">More Info</button>
-                </div>
-            </div>
-        </section>
-
-        <div class="rails">
-            <section class="media-row" id="row-trending">
-                <h2>Trending Now</h2>
-                <div class="row-viewport"><div class="poster-row"></div></div>
-            </section>
-
-            <section class="media-row" id="row-movies">
-                <h2>Popular Movies</h2>
-                <div class="row-viewport"><div class="poster-row"></div></div>
-            </section>
-
-            <section class="media-row" id="row-series">
-                <h2>Popular TV Shows</h2>
-                <div class="row-viewport"><div class="poster-row"></div></div>
-            </section>
-        </div>
-
-        <div class="status-message" id="status-message">Loading...</div>
-    </main>
-</div>
-
+<div class="tv-shell">
+<nav class="navbar tv-navbar" id="tv-navbar"><a href="/" class="navbar-logo"><span class="logo-icon">&#9654;</span>CineStream</a><div class="navbar-links" id="tv-nav-links"><a href="index.html" class="active">Home</a><a href="../browse.html">Browse</a><a href="../watchlist.html">Watchlist</a></div><div class="navbar-right"><a href="../search.html" class="icon-btn tv-nav-action" aria-label="Search">&#9906;</a><a href="../login.html" class="btn btn-crimson tv-sign-in">Sign In</a></div></nav>
+<main class="tv-stage"><section class="hero tv-hero" id="hero"><div class="hero-backdrop" id="hero-backdrop"></div><div class="hero-content"><div class="hero-badge" id="hero-badge">CINESTREAM FEATURED</div><h1 class="hero-title" id="hero-title">Loading...</h1><div class="hero-meta" id="hero-meta"></div><p class="hero-overview" id="hero-overview"></p><div class="hero-actions"><a class="btn btn-primary tv-focusable" id="hero-play" href="#">&#9654; Play</a><a class="btn btn-secondary tv-focusable" id="hero-info" href="#">More Info</a></div></div><div class="hero-dots" id="hero-dots"></div></section><div class="tv-rails" id="tv-rails"><section class="section tv-section" id="section-trending"><div class="section-header"><h2 class="section-title">Trending Today</h2></div><div class="slider-wrap"><div class="slider tv-slider"></div></div></section><section class="section tv-section" id="section-movies"><div class="section-header"><h2 class="section-title">Popular Movies</h2></div><div class="slider-wrap"><div class="slider tv-slider"></div></div></section><section class="section tv-section" id="section-tv"><div class="section-header"><h2 class="section-title">Popular TV Shows</h2></div><div class="slider-wrap"><div class="slider tv-slider"></div></div></section></div></main><div class="tv-status" id="tv-status">Loading CineStream…</div></div>
 <script src="js/app.js"></script>
-</body>
-</html>
+</body></html>
