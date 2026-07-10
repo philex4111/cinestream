@@ -30,6 +30,7 @@ var TVApp = {
     renderPosters: function(items) {
         var grid = document.getElementById('poster-grid');
         var html = '';
+        this.itemsData = items;
 
         for (var i = 0; i < items.length; i++) {
             var item = items[i];
@@ -69,6 +70,10 @@ var TVApp = {
                 case 13: // Enter
                     self.playSelection();
                     break;
+                case 38: // Up
+                case 40: // Down
+                    // Future: Navigation between rows
+                    break;
                 case 461: // Return (LG NetCast)
                 case 8:   // Backspace (Browser)
                     e.preventDefault();
@@ -100,7 +105,22 @@ var TVApp = {
     },
 
     updateHero: function(index) {
-        // Placeholder for updating background/title when browsing
+        var item = this.itemsData[index];
+        if (!item) return;
+
+        var titleEl = document.getElementById('hero-title');
+        var overviewEl = document.getElementById('hero-overview');
+        var heroEl = document.getElementById('hero');
+
+        titleEl.innerHTML = item.title || item.name;
+        overviewEl.innerHTML = (item.overview || "").substring(0, 200) + "...";
+
+        if (item.backdrop_path) {
+            var bgUrl = 'https://image.tmdb.org/t/p/w1280' + item.backdrop_path;
+            heroEl.style.backgroundImage = "url('" + bgUrl + "')";
+            heroEl.style.backgroundSize = "cover";
+            heroEl.style.backgroundPosition = "center";
+        }
     },
 
     playSelection: function() {
