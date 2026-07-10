@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CineStream TV ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Details</title>
+    <title>CineStream TV - Details</title>
     <link rel="stylesheet" href="../css/main.css">
     <link rel="stylesheet" href="css/tv.css">
     <style>
-        /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ TV-Optimized Full-Width Detail Styles (Parallax + Logic Parity) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+        /* TV detail page layout and focus styles. */
         .tv-shell { background: #050505; height: 100vh; overflow: hidden; position: relative; width: 1280px; }
 
         .parallax-backdrop {
@@ -100,7 +100,7 @@
                 <p class="hero-overview-tv" id="overview"></p>
 
                 <div class="hero-actions-tv" id="main-actions">
-                    <a id="play-btn" class="btn btn-primary btn-tv tv-focusable">ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“Ãƒâ€šÃ‚Â¶ Play</a>
+                    <a id="play-btn" class="btn btn-primary btn-tv tv-focusable">Play</a>
                     <button id="watchlist-btn" class="btn btn-secondary btn-tv tv-focusable">Add to Watchlist</button>
                 </div>
             </div>
@@ -177,11 +177,11 @@
             document.getElementById('title').innerHTML = data.title || data.name;
             document.getElementById('overview').innerHTML = (data.overview || "");
             document.getElementById('parallax-backdrop').style.backgroundImage = "url('https://image.tmdb.org/t/p/w1280" + data.backdrop_path + "')";
-            document.getElementById('type-badge').innerHTML = (type === 'tv' ? 'ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€šÃ‚Âº TV SERIES' : 'ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½Ãƒâ€šÃ‚Â¬ MOVIE');
+            document.getElementById('type-badge').innerHTML = (type === 'tv' ? 'TV SERIES' : 'MOVIE');
 
             var year = (data.release_date || data.first_air_date || '').substring(0, 4);
-            var rate = data.vote_average ? 'ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ ' + data.vote_average.toFixed(1) : 'ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ';
-            document.getElementById('meta').innerHTML = '<span class="rating-tv">' + rate + '</span><span> ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ ' + year + '</span>' + (data.runtime ? '<span> ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ ' + data.runtime + 'm</span>' : '');
+            var rate = data.vote_average ? 'Rating ' + data.vote_average.toFixed(1) : 'Rating unavailable';
+            document.getElementById('meta').innerHTML = '<span class="rating-tv">' + rate + '</span><span> - ' + year + '</span>' + (data.runtime ? '<span> - ' + data.runtime + 'm</span>' : '');
 
             if (data.genres) {
                 var gHtml = '';
@@ -192,7 +192,7 @@
             seasonsData = (data.seasons || []).filter(function(season) { return season.season_number > 0; });
             if (!seasonsData.length && type === 'tv') seasonsData = [{ season_number: 1, name: 'Season 1' }];
             updateSeasonPicker();
-            var stats = '<div class="stat-item-tv"><span class="stat-label-tv">Rating</span><span class="stat-value-tv" style="color:var(--crimson)">ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ ' + rate + ' / 10</span></div>';
+            var stats = '<div class="stat-item-tv"><span class="stat-label-tv">Rating</span><span class="stat-value-tv" style="color:var(--crimson)">' + rate + ' / 10</span></div>';
             stats += '<div class="stat-item-tv"><span class="stat-label-tv">Year</span><span class="stat-value-tv">' + year + '</span></div>';
             if (data.status) stats += '<div class="stat-item-tv"><span class="stat-label-tv">Status</span><span class="stat-value-tv">' + data.status + '</span></div>';
             if (data.number_of_episodes) stats += '<div class="stat-item-tv"><span class="stat-label-tv">Episodes</span><span class="stat-value-tv">' + data.number_of_episodes + '</span></div>';
