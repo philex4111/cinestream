@@ -1,445 +1,108 @@
-/* CineStream TV - ES5/XHR compatible with LG NetCast 4.0. */
-
-var TVApp = {
-    apiBase: "/api",
-    rows: [],
-    itemsByRow: [],
-    focusedRow: 0,
-    focusedIndex: 0,
-    focusArea: "content",
-    navIndex: 0,
-    heroButton: 0,
-    heroItem: null,
-
-    init: function () {
-        this.bindEvents();
-        this.loadContent();
-    },
-
-    bindEvents: function () {
+﻿/* CineStream TV: ES5/XHR remote adapter over the same /api TMDB contract as the web app. */
+var CineStreamTV = {
+    api: '/api', rows: [], data: [], row: 0, col: 0, area: 'cards', nav: 1, heroAction: 0, heroItems: [], heroIndex: 0,
+    init: function () { this.bind(); this.load(); },
+    bind: function () {
         var self = this;
-
-        document.onkeydown = function (event) {
-            event = event || window.event;
-            var key = event.keyCode || event.which;
-
-            if (key === 37) self.moveLeft();
-            else if (key === 39) self.moveRight();
-            else if (key === 38) self.moveUp();
-            else if (key === 40) self.moveDown();
-            else if (key === 13) self.activate();
-            else if (key === 461 || key === 8) {
-                event.preventDefault();
-                self.goBack();
-            }
+        document.onkeydown = function (e) {
+            e = e || window.event; var k = e.keyCode || e.which;
+            if (k === 37) self.left(); else if (k === 39) self.right(); else if (k === 38) self.up(); else if (k === 40) self.down();
+            else if (k === 13) self.enter(); else if (k === 461 || k === 8) { e.preventDefault(); self.back(); }
         };
-
-        document.getElementById("hero-play").onclick = function () {
-            self.playCurrent();
-        };
-
-        document.getElementById("hero-info").onclick = function () {
-            self.showStatus("Use Play to start watching this title.", false);
-        };
-
-        var nav = document.getElementsByClassName("nav-item");
-        for (var i = 0; i < nav.length; i++) {
-            (function (index) {
-                nav[index].onclick = function () {
-                    self.focusArea = "nav";
-                    self.navIndex = index;
-                    self.updateNavFocus();
-                    self.activate();
-                };
-            }(i));
-        }
+        document.getElementById('hero-play').onclick = function (e) { e.preventDefault(); self.goWatch(); };
+        document.getElementById('hero-info').onclick = function (e) { e.preventDefault(); self.goDetail(); };
     },
-
-    loadContent: function () {
-        var self = this;
-        var requests = [
-            { path: "/tmdb/trending?time=day", rowId: "row-trending", index: 0 },
-            { path: "/tmdb/movie/popular?page=1", rowId: "row-movies", index: 1 },
-            { path: "/tmdb/tv/popular?page=1", rowId: "row-series", index: 2 }
+    load: function () {
+        var self = this, done = 0, sources = [
+            ['/tmdb/trending?time=day', 'section-trending'], ['/tmdb/movie/popular?page=1', 'section-movies'], ['/tmdb/tv/popular?page=1', 'section-tv']
         ];
-
-        var finished = 0;
-
-        for (var i = 0; i < requests.length; i++) {
-            (function (request) {
-                self.request(
-                    request.path,
-                    function (data) {
-                        self.renderRow(request.rowId, data.results || [], request.index);
-                        finished++;
-                        self.finishLoading(finished);
-                    },
-                    function () {
-                        self.renderRow(request.rowId, [], request.index);
-                        finished++;
-                        self.showStatus("Some content could not be loaded. Check your connection.", true);
-                        self.finishLoading(finished);
-                    }
-                );
-            }(requests[i]));
-        }
+        for (var i = 0; i < sources.length; i++) (function (source, index) {
+            self.get(source[0], function (payload) { self.renderRow(source[1], payload.results || [], index); done++; self.ready(done); }, function () { self.renderRow(source[1], [], index); done++; self.status('Unable to load some CineStream content.', true); self.ready(done); });
+        }(sources[i], i));
     },
-
-    finishLoading: function (finished) {
-        if (finished !== 3) return;
-
-        this.rows = document.getElementsByClassName("media-row");
-
-        if (!this.heroItem) {
-            this.showStatus("No titles are available right now.", true);
-            return;
-        }
-
-        this.showStatus("", false);
-        this.updateContentFocus();
-    },
-
-    request: function (path, success, failure) {
-        var xhr = new XMLHttpRequest();
-
-        xhr.open("GET", this.apiBase + path, true);
-
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState !== 4) return;
-
-            if (xhr.status >= 200 && xhr.status < 300) {
-                try {
-                    success(JSON.parse(xhr.responseText));
-                } catch (error) {
-                    failure();
-                }
-            } else {
-                failure();
-            }
-        };
-
+    get: function (path, yes, no) {
+        var xhr = new XMLHttpRequest(); xhr.open('GET', this.api + path, true);
+        xhr.onreadystatechange = function () { if (xhr.readyState !== 4) return; if (xhr.status >= 200 && xhr.status < 300) { try { yes(JSON.parse(xhr.responseText)); } catch (x) { no(); } } else no(); };
         xhr.send();
     },
-
-    renderRow: function (rowId, items, rowIndex) {
-        var row = document.getElementById(rowId);
-        var track = row.getElementsByClassName("poster-row")[0];
-        var html = "";
-
-        this.itemsByRow[rowIndex] = items;
-
+    ready: function (done) {
+        if (done !== 3) return;
+        this.rows = document.getElementsByClassName('tv-section');
+        this.heroItems = (this.data[0] || []).filter(function (item) { return item.backdrop_path; }).slice(0, 8);
+        if (!this.heroItems.length) this.heroItems = (this.data[1] || []).filter(function (item) { return item.backdrop_path; }).slice(0, 8);
+        if (!this.heroItems.length) { this.status('No content is available right now.', true); return; }
+        this.makeDots(); this.showHero(this.heroItems[0]); this.status(''); this.focusCards();
+    },
+    renderRow: function (id, items, index) {
+        this.data[index] = items; var slider = document.getElementById(id).getElementsByClassName('tv-slider')[0], html = '';
         for (var i = 0; i < items.length; i++) {
-            var item = items[i];
-            var title = this.escapeHtml(item.title || item.name || "Untitled");
-            var image = item.backdrop_path
-                ? "https://image.tmdb.org/t/p/w342" + item.backdrop_path
-                : "";
-
-            html +=
-                '<div class="poster" data-index="' + i + '" ' +
-                'style="background-image:url(\'' + image + '\')">' +
-                '<span class="poster-title">' + title + "</span>" +
-                "</div>";
+            var item = items[i], title = this.escape(item.title || item.name || 'Untitled'), image = item.backdrop_path ? 'https://image.tmdb.org/t/p/w342' + item.backdrop_path : '';
+            html += '<article class="card tv-card" data-index="' + i + '"><img class="card-poster" src="' + image + '" alt="' + title + '"><div class="card-overlay"><div class="card-overlay-title">' + title + '</div></div></article>';
         }
-
-        if (!html) {
-            html = '<div class="poster"><span class="poster-title">Nothing available</span></div>';
-        }
-
-        track.innerHTML = html;
-
-        var self = this;
-        var posters = track.getElementsByClassName("poster");
-
-        for (var p = 0; p < posters.length; p++) {
-            (function (posterIndex) {
-                posters[posterIndex].onclick = function () {
-                    if (!self.itemsByRow[rowIndex][posterIndex]) return;
-
-                    self.focusArea = "content";
-                    self.focusedRow = rowIndex;
-                    self.focusedIndex = posterIndex;
-                    self.updateContentFocus();
-                };
-            }(p));
-        }
+        slider.innerHTML = html || '<div style="color:var(--grey-2);padding:20px">No titles available.</div>';
     },
-
-    moveLeft: function () {
-        if (this.focusArea === "nav") return;
-
-        if (this.focusArea === "hero") {
-            this.heroButton = 0;
-            this.updateHeroFocus();
-            return;
-        }
-
-        if (this.focusedIndex > 0) {
-            this.focusedIndex--;
-            this.updateContentFocus();
-        } else {
-            this.focusArea = "nav";
-            this.navIndex = 0;
-            this.updateNavFocus();
-        }
+    left: function () {
+        if (this.area === 'nav') { if (this.nav > 0) { this.nav--; this.focusNav(); } return; }
+        if (this.area === 'hero') { this.heroAction = 0; this.focusHero(); return; }
+        if (this.col > 0) { this.col--; this.focusCards(); } else { this.area = 'nav'; this.nav = 1; this.focusNav(); }
     },
-
-    moveRight: function () {
-        if (this.focusArea === "nav") {
-            this.focusArea = "content";
-            this.updateContentFocus();
-            return;
-        }
-
-        if (this.focusArea === "hero") {
-            this.heroButton = 1;
-            this.updateHeroFocus();
-            return;
-        }
-
-        var items = this.itemsByRow[this.focusedRow] || [];
-
-        if (this.focusedIndex < items.length - 1) {
-            this.focusedIndex++;
-            this.updateContentFocus();
-        }
+    right: function () {
+        if (this.area === 'nav') { var links = this.links(); if (this.nav < links.length - 1) { this.nav++; this.focusNav(); } return; }
+        if (this.area === 'hero') { this.heroAction = 1; this.focusHero(); return; }
+        var list = this.data[this.row] || []; if (this.col < list.length - 1) { this.col++; this.focusCards(); }
     },
-
-    moveUp: function () {
-        if (this.focusArea === "nav") {
-            if (this.navIndex > 0) {
-                this.navIndex--;
-                this.updateNavFocus();
-            }
-            return;
-        }
-
-        if (this.focusArea === "hero") return;
-
-        if (this.focusedRow === 0) {
-            this.focusArea = "hero";
-            this.heroButton = 0;
-            this.updateHeroFocus();
-        } else {
-            this.focusedRow--;
-            this.clampFocusedIndex();
-            this.updateContentFocus();
-        }
+    up: function () {
+        if (this.area === 'nav') return;
+        if (this.area === 'hero') return;
+        if (this.row === 0) { this.area = 'hero'; this.heroAction = 0; this.focusHero(); } else { this.row--; this.clamp(); this.focusCards(); }
     },
-
-    moveDown: function () {
-        if (this.focusArea === "nav") {
-            if (this.navIndex < 3) {
-                this.navIndex++;
-                this.updateNavFocus();
-            }
-            return;
-        }
-
-        if (this.focusArea === "hero") {
-            this.focusArea = "content";
-            this.updateContentFocus();
-            return;
-        }
-
-        if (this.focusedRow < this.itemsByRow.length - 1) {
-            this.focusedRow++;
-            this.clampFocusedIndex();
-            this.updateContentFocus();
-        }
+    down: function () {
+        if (this.area === 'nav') return;
+        if (this.area === 'hero') { this.area = 'cards'; this.focusCards(); return; }
+        if (this.row < this.data.length - 1) { this.row++; this.clamp(); this.focusCards(); }
     },
-
-    activate: function () {
-        if (this.focusArea === "hero") {
-            if (this.heroButton === 0) this.playCurrent();
-            else this.showStatus("Use Play to start watching this title.", false);
-            return;
-        }
-
-        if (this.focusArea === "content") {
-            this.playCurrent();
-            return;
-        }
-
-        if (this.navIndex === 0) {
-            this.focusArea = "content";
-            this.focusedRow = 0;
-            this.focusedIndex = 0;
-            this.updateContentFocus();
-        } else if (this.navIndex === 1) {
-            this.showStatus("Search is not available in the TV version yet.", false);
-        } else if (this.navIndex === 2) {
-            this.focusArea = "content";
-            this.focusedRow = 1;
-            this.focusedIndex = 0;
-            this.updateContentFocus();
-        } else if (this.navIndex === 3) {
-            this.focusArea = "content";
-            this.focusedRow = 2;
-            this.focusedIndex = 0;
-            this.updateContentFocus();
-        }
+    enter: function () {
+        if (this.area === 'nav') { var link = this.links()[this.nav]; if (link) window.location.href = link.href; }
+        else if (this.area === 'hero') { if (this.heroAction === 0) this.goWatch(); else this.goDetail(); }
+        else this.goDetail();
     },
-
-    goBack: function () {
-        if (this.focusArea === "nav") {
-            this.focusArea = "content";
-            this.updateContentFocus();
-        } else {
-            this.focusArea = "nav";
-            this.navIndex = 0;
-            this.updateNavFocus();
-        }
+    back: function () { if (this.area === 'nav') { this.area = 'cards'; this.focusCards(); } else { this.area = 'nav'; this.nav = 1; this.focusNav(); } },
+    clamp: function () { var max = (this.data[this.row] || []).length - 1; if (this.col > max) this.col = Math.max(0, max); },
+    clear: function () {
+        var cards = document.getElementsByClassName('tv-card'), links = this.links(), buttons = [document.getElementById('hero-play'), document.getElementById('hero-info')];
+        for (var i = 0; i < cards.length; i++) cards[i].className = 'card tv-card';
+        for (i = 0; i < links.length; i++) links[i].className = links[i].className.replace(' tv-nav-focused', '');
+        for (i = 0; i < buttons.length; i++) buttons[i].className = buttons[i].className.replace(' tv-focused', '');
     },
-
-    clampFocusedIndex: function () {
-        var items = this.itemsByRow[this.focusedRow] || [];
-
-        if (this.focusedIndex >= items.length) {
-            this.focusedIndex = Math.max(0, items.length - 1);
-        }
+    focusCards: function () {
+        this.clear(); var section = this.rows[this.row]; if (!section) return; var cards = section.getElementsByClassName('tv-card'), card = cards[this.col]; if (!card) return;
+        card.className += ' tv-focused'; this.scroll(section.getElementsByClassName('tv-slider')[0], card); this.showHero((this.data[this.row] || [])[this.col]);
     },
-
-    updateContentFocus: function () {
-        this.clearAllFocus();
-
-        var row = this.rows[this.focusedRow];
-        if (!row) return;
-
-        var posters = row.getElementsByClassName("poster");
-        var current = posters[this.focusedIndex];
-
-        if (!current) return;
-
-        current.className = "poster focused";
-        this.scrollRow(row, current);
-
-        var item = (this.itemsByRow[this.focusedRow] || [])[this.focusedIndex];
-        this.updateHero(item);
+    focusNav: function () { this.clear(); var link = this.links()[this.nav]; if (link) link.className += ' tv-nav-focused'; },
+    focusHero: function () { this.clear(); var b = this.heroAction === 0 ? document.getElementById('hero-play') : document.getElementById('hero-info'); b.className += ' tv-focused'; },
+    scroll: function (slider, card) { var x = Math.max(0, card.offsetLeft - 12); slider.scrollLeft = x; },
+    links: function () { return document.getElementById('tv-navbar').getElementsByTagName('a'); },
+    showHero: function (item) {
+        if (!item) return; this.current = item;
+        var title = item.title || item.name || 'Untitled', year = (item.release_date || item.first_air_date || '').substring(0, 4), type = item.media_type || (item.first_air_date ? 'tv' : 'movie'), rating = item.vote_average ? item.vote_average.toFixed(1) : '–';
+        document.getElementById('hero-title').innerHTML = this.escape(title);
+        document.getElementById('hero-overview').innerHTML = this.escape((item.overview || 'Discover your next great watch on CineStream.').substring(0, 220));
+        document.getElementById('hero-meta').innerHTML = '<span class="rating">★ ' + rating + '</span><span class="dot"></span><span>' + (year || 'New') + '</span><span class="dot"></span><span>' + (type === 'tv' ? 'TV Series' : 'Movie') + '</span>';
+        document.getElementById('hero-backdrop').style.backgroundImage = item.backdrop_path ? "url('https://image.tmdb.org/t/p/w1280" + item.backdrop_path + "')" : '';
+        document.getElementById('hero-play').href = '/watch.html?id=' + item.id + '&type=' + type;
+        document.getElementById('hero-info').href = '/detail.html?id=' + item.id + '&type=' + type;
+        this.heroIndex = this.heroItems.indexOf(item); this.updateDots();
     },
-
-    updateHeroFocus: function () {
-        this.clearAllFocus();
-
-        var buttons = [
-            document.getElementById("hero-play"),
-            document.getElementById("hero-info")
-        ];
-
-        buttons[this.heroButton].className += " focused";
+    makeDots: function () {
+        var self = this, dots = document.getElementById('hero-dots'), html = '';
+        for (var i = 0; i < this.heroItems.length; i++) html += '<button class="hero-dot" data-index="' + i + '"></button>';
+        dots.innerHTML = html; var buttons = dots.getElementsByTagName('button');
+        for (i = 0; i < buttons.length; i++) (function (n) { buttons[n].onclick = function () { self.showHero(self.heroItems[n]); }; }(i));
     },
-
-    updateNavFocus: function () {
-        this.clearAllFocus();
-
-        var nav = document.getElementsByClassName("nav-item");
-
-        for (var i = 0; i < nav.length; i++) {
-            nav[i].className = i === this.navIndex
-                ? "nav-item focused"
-                : "nav-item";
-        }
-
-        document.getElementsByClassName("side-nav")[0].className = "side-nav expanded";
-    },
-
-    clearAllFocus: function () {
-        var posters = document.getElementsByClassName("poster");
-
-        for (var i = 0; i < posters.length; i++) {
-            posters[i].className = "poster";
-        }
-
-        var buttons = [
-            document.getElementById("hero-play"),
-            document.getElementById("hero-info")
-        ];
-
-        for (var b = 0; b < buttons.length; b++) {
-            buttons[b].className = buttons[b].className.replace(" focused", "");
-        }
-
-        var nav = document.getElementsByClassName("nav-item");
-
-        for (var n = 0; n < nav.length; n++) {
-            nav[n].className = n === 0 ? "nav-item active" : "nav-item";
-        }
-
-        document.getElementsByClassName("side-nav")[0].className = "side-nav";
-    },
-
-    scrollRow: function (row, current) {
-        var track = row.getElementsByClassName("poster-row")[0];
-        var viewport = row.getElementsByClassName("row-viewport")[0];
-        var target = current.offsetLeft - 12;
-        var maxScroll = Math.max(0, track.scrollWidth - viewport.clientWidth + 8);
-
-        if (target < 0) target = 0;
-        if (target > maxScroll) target = maxScroll;
-
-        track.style.transform = "translateX(-" + target + "px)";
-    },
-
-    updateHero: function (item) {
-        if (!item) return;
-
-        this.heroItem = item;
-
-        var title = item.title || item.name || "Untitled";
-        var year = (item.release_date || item.first_air_date || "").substring(0, 4);
-        var score = item.vote_average ? Math.round(item.vote_average * 10) : 0;
-        var type = item.media_type === "tv" || item.first_air_date ? "Series" : "Movie";
-
-        document.getElementById("hero-title").innerHTML = this.escapeHtml(title);
-        document.getElementById("hero-overview").innerHTML = this.escapeHtml(
-            (item.overview || "Discover something great to watch tonight.").substring(0, 220)
-        );
-
-        document.getElementById("hero-meta").innerHTML =
-            '<span class="match">' + score + '% Match</span>' +
-            '<span class="meta-divider">|</span>' +
-            "<span>" + (year || "New") + "</span>" +
-            '<span class="meta-divider">|</span>' +
-            "<span>" + type + "</span>";
-
-        if (item.backdrop_path) {
-            document.getElementById("hero").style.backgroundImage =
-                "url('https://image.tmdb.org/t/p/w1280" + item.backdrop_path + "')";
-        }
-    },
-
-    playCurrent: function () {
-        var item = this.heroItem;
-
-        if (!item) return;
-
-        var type = item.media_type || (item.first_air_date ? "tv" : "movie");
-
-        window.location.href =
-            "player.html?id=" + item.id + "&type=" + type;
-    },
-
-    showStatus: function (message, isError) {
-        var status = document.getElementById("status-message");
-
-        if (!message) {
-            status.className = "status-message hidden";
-            return;
-        }
-
-        status.innerHTML = message;
-        status.className = "status-message" + (isError ? " error" : "");
-    },
-
-    escapeHtml: function (value) {
-        return String(value || "")
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;");
-    }
+    updateDots: function () { var dots = document.getElementById('hero-dots').getElementsByClassName('hero-dot'); for (var i = 0; i < dots.length; i++) dots[i].className = i === this.heroIndex ? 'hero-dot active' : 'hero-dot'; },
+    goWatch: function () { if (this.current) window.location.href = document.getElementById('hero-play').href; },
+    goDetail: function () { if (this.current) window.location.href = document.getElementById('hero-info').href; },
+    status: function (message, error) { var s = document.getElementById('tv-status'); s.innerHTML = message; s.className = message ? 'tv-status' + (error ? ' error' : '') : 'tv-status hidden'; },
+    escape: function (value) { return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 };
-
-window.onload = function () {
-    TVApp.init();
-};
+window.onload = function () { CineStreamTV.init(); };
