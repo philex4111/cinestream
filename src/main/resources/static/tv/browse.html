@@ -143,14 +143,14 @@
             else {
                 pages = [1];
                 var start = Math.max(2, current - 1), end = Math.min(total - 1, current + 1);
-                if (start > 2) pages.push('â€¦');
+                if (start > 2) pages.push('...');
                 for (var j = start; j <= end; j++) pages.push(j);
-                if (end < total - 1) pages.push('â€¦');
+                if (end < total - 1) pages.push('...');
                 pages.push(total);
             }
             var html = '';
             for (var k = 0; k < pages.length; k++) {
-                if (pages[k] === 'â€¦') html += '<span class="tv-page-chip ellipsis">â€¦</span>';
+                if (pages[k] === '...') html += '<span class="tv-page-chip ellipsis">...</span>';
                 else html += '<button class="tv-page-chip' + (pages[k] === current ? ' active' : '') + '" onclick="goToPage(' + pages[k] + ')">' + pages[k] + '</button>';
             }
             document.getElementById('page-info').innerHTML = html;
