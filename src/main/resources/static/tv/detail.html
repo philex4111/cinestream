@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CineStream TV â€” Details</title>
+    <title>CineStream TV ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Details</title>
     <link rel="stylesheet" href="../css/main.css">
     <link rel="stylesheet" href="css/tv.css">
     <style>
-        /* â”€â”€ TV-Optimized Full-Width Detail Styles (Parallax + Logic Parity) â”€â”€ */
+        /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ TV-Optimized Full-Width Detail Styles (Parallax + Logic Parity) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
         .tv-shell { background: #050505; height: 100vh; overflow: hidden; position: relative; width: 1280px; }
 
         .parallax-backdrop {
@@ -68,7 +68,12 @@
 
         .season-select-tv { padding: 10px 20px; background: var(--bg-elevated); border: 2px solid transparent; border-radius: 4px; color: #fff; font-weight: 700; }
         .season-select-tv.tv-focused { border-color: var(--crimson); }
-    </style>
+
+        .season-picker-tv { position:relative; }
+        .season-menu-tv { position:absolute; top:calc(100% + 6px); left:0; width:190px; padding:6px; background:#171717; border:1px solid #444; border-radius:6px; box-shadow:0 14px 30px rgba(0,0,0,.65); z-index:150; display:none; }
+        .season-menu-tv.open { display:block; }
+        .season-option-tv { padding:10px 14px; border-radius:4px; color:#ddd; font-size:16px; font-weight:700; }
+        .season-option-tv.selected { background:var(--crimson); color:#fff; }    </style>
 </head>
 <body>
     <div class="tv-shell">
@@ -95,7 +100,7 @@
                 <p class="hero-overview-tv" id="overview"></p>
 
                 <div class="hero-actions-tv" id="main-actions">
-                    <a id="play-btn" class="btn btn-primary btn-tv tv-focusable">â–¶ Play</a>
+                    <a id="play-btn" class="btn btn-primary btn-tv tv-focusable">ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“Ãƒâ€šÃ‚Â¶ Play</a>
                     <button id="watchlist-btn" class="btn btn-secondary btn-tv tv-focusable">Add to Watchlist</button>
                 </div>
             </div>
@@ -113,7 +118,7 @@
             <div class="vertical-section" id="episodes-section" style="display:none;">
                 <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                     <h2 class="section-title" style="margin-bottom:0; color:#fff;">Episodes</h2>
-                    <div id="season-selector" class="season-select-tv tv-focusable">Season 1</div>
+                    <div class="season-picker-tv"><div id="season-selector" class="season-select-tv tv-focusable">Season 1 &#9662;</div><div id="season-menu" class="season-menu-tv"></div></div>
                 </div>
                 <div class="ep-list-tv" id="ep-list"></div>
             </div>
@@ -132,7 +137,7 @@
         var params = new URLSearchParams(window.location.search);
         var id = params.get('id'), type = params.get('type') || 'movie';
         var focusZone = 'hero', navIdx = 0, heroIdx = 0, castIdx = 0, epIdx = 0, simIdx = 0, seasonNum = 1;
-        var inWatchlist = false, castData = [], episodesData = [], similarData = [];
+        var inWatchlist = false, castData = [], episodesData = [], similarData = [], seasonsData = [], seasonMenuOpen = false, seasonIdx = 0;
 
         function load() {
             var xhr = new XMLHttpRequest();
@@ -172,11 +177,11 @@
             document.getElementById('title').innerHTML = data.title || data.name;
             document.getElementById('overview').innerHTML = (data.overview || "");
             document.getElementById('parallax-backdrop').style.backgroundImage = "url('https://image.tmdb.org/t/p/w1280" + data.backdrop_path + "')";
-            document.getElementById('type-badge').innerHTML = (type === 'tv' ? 'ðŸ“º TV SERIES' : 'ðŸŽ¬ MOVIE');
+            document.getElementById('type-badge').innerHTML = (type === 'tv' ? 'ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€šÃ‚Âº TV SERIES' : 'ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½Ãƒâ€šÃ‚Â¬ MOVIE');
 
             var year = (data.release_date || data.first_air_date || '').substring(0, 4);
-            var rate = data.vote_average ? 'â˜… ' + data.vote_average.toFixed(1) : 'â€“';
-            document.getElementById('meta').innerHTML = '<span class="rating-tv">' + rate + '</span><span> â€¢ ' + year + '</span>' + (data.runtime ? '<span> â€¢ ' + data.runtime + 'm</span>' : '');
+            var rate = data.vote_average ? 'ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ ' + data.vote_average.toFixed(1) : 'ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ';
+            document.getElementById('meta').innerHTML = '<span class="rating-tv">' + rate + '</span><span> ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ ' + year + '</span>' + (data.runtime ? '<span> ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ ' + data.runtime + 'm</span>' : '');
 
             if (data.genres) {
                 var gHtml = '';
@@ -184,7 +189,10 @@
                 document.getElementById('genres').innerHTML = gHtml;
             }
 
-            var stats = '<div class="stat-item-tv"><span class="stat-label-tv">Rating</span><span class="stat-value-tv" style="color:var(--crimson)">â˜… ' + rate + ' / 10</span></div>';
+            seasonsData = (data.seasons || []).filter(function(season) { return season.season_number > 0; });
+            if (!seasonsData.length && type === 'tv') seasonsData = [{ season_number: 1, name: 'Season 1' }];
+            updateSeasonPicker();
+            var stats = '<div class="stat-item-tv"><span class="stat-label-tv">Rating</span><span class="stat-value-tv" style="color:var(--crimson)">ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ ' + rate + ' / 10</span></div>';
             stats += '<div class="stat-item-tv"><span class="stat-label-tv">Year</span><span class="stat-value-tv">' + year + '</span></div>';
             if (data.status) stats += '<div class="stat-item-tv"><span class="stat-label-tv">Status</span><span class="stat-value-tv">' + data.status + '</span></div>';
             if (data.number_of_episodes) stats += '<div class="stat-item-tv"><span class="stat-label-tv">Episodes</span><span class="stat-value-tv">' + data.number_of_episodes + '</span></div>';
@@ -210,6 +218,25 @@
             updateFocus();
         }
 
+        function updateSeasonPicker() {
+            var selector = document.getElementById('season-selector'), menu = document.getElementById('season-menu');
+            if (!selector || !menu) return;
+            selector.innerHTML = 'Season ' + seasonNum + ' &#9662;';
+            var html = '';
+            for (var i = 0; i < seasonsData.length; i++) html += '<div class="season-option-tv' + (i === seasonIdx ? ' selected' : '') + '" data-season-index="' + i + '">Season ' + seasonsData[i].season_number + '</div>';
+            menu.innerHTML = html; menu.className = 'season-menu-tv' + (seasonMenuOpen ? ' open' : '');
+            var options = menu.querySelectorAll('.season-option-tv');
+            for (var j = 0; j < options.length; j++) options[j].onclick = (function(index) { return function() { selectSeason(index); }; })(j);
+        }
+        function selectSeason(index) {
+            if (!seasonsData[index]) return;
+            seasonIdx = index; seasonNum = seasonsData[index].season_number; seasonMenuOpen = false; epIdx = 0;
+            updateSeasonPicker(); loadEpisodes(); updateFocus();
+        }
+        function openSimilar(index) {
+            var item = similarData[index];
+            if (item) window.location.href = 'detail.html?id=' + item.id + '&type=' + (item.media_type || (item.first_air_date ? 'tv' : 'movie'));
+        }
         function loadEpisodes() {
             var xhr = new XMLHttpRequest();
             xhr.open('GET', '/api/tmdb/tv/' + id + '/season/' + seasonNum, true);
@@ -247,6 +274,8 @@
                             html += '<div class="sim-card-tv" id="sim-' + i + '"><img src="https://image.tmdb.org/t/p/w342' + similarData[i].poster_path + '" style="width:100%"></div>';
                         }
                         document.getElementById('similar-slider').innerHTML = html;
+                        var cards = document.querySelectorAll('.sim-card-tv');
+                        for (var j = 0; j < cards.length; j++) cards[j].onclick = (function(index) { return function() { openSimilar(index); }; })(j);
                     }
                 }
             };
@@ -304,7 +333,8 @@
                 if (focusZone === 'hero') focusZone = 'nav';
                 else if (focusZone === 'cast') focusZone = 'hero';
                 else if (focusZone === 'episodes') {
-                    if (heroIdx === 1 && epIdx > 0) epIdx--;
+                    if (seasonMenuOpen) { if (seasonIdx > 0) seasonIdx--; updateSeasonPicker(); }
+                    else if (heroIdx === 1 && epIdx > 0) epIdx--;
                     else if (heroIdx === 1) heroIdx = 0;
                     else focusZone = castData.length ? 'cast' : 'hero';
                 } else if (focusZone === 'similar') focusZone = episodesData.length ? 'episodes' : (castData.length ? 'cast' : 'hero');
@@ -313,14 +343,17 @@
                 else if (focusZone === 'hero') focusZone = castData.length ? 'cast' : (episodesData.length ? 'episodes' : 'similar');
                 else if (focusZone === 'cast') focusZone = episodesData.length ? 'episodes' : 'similar';
                 else if (focusZone === 'episodes') {
-                    if (heroIdx === 0) { heroIdx = 1; epIdx = 0; }
+                    if (seasonMenuOpen) { if (seasonIdx < seasonsData.length - 1) seasonIdx++; updateSeasonPicker(); }
+                    else if (heroIdx === 0) { heroIdx = 1; epIdx = 0; }
                     else if (epIdx < episodesData.length - 1) epIdx++;
                     else focusZone = 'similar';
                 }
             } else if (k === 13) { // Enter
                 if (focusZone === 'nav') window.location.href = document.querySelectorAll('.tv-nav-item, .navbar-logo')[navIdx].getAttribute('href');
                 else if (focusZone === 'hero' && heroIdx === 0) window.location.href = document.getElementById('play-btn').href;
+                else if (focusZone === 'episodes' && heroIdx === 0) { if (seasonMenuOpen) selectSeason(seasonIdx); else { seasonIdx = 0; for (var si = 0; si < seasonsData.length; si++) if (seasonsData[si].season_number === seasonNum) seasonIdx = si; seasonMenuOpen = true; updateSeasonPicker(); } }
                 else if (focusZone === 'episodes' && heroIdx === 1) window.location.href = 'player.html?id=' + id + '&type=tv&season=' + seasonNum + '&episode=' + episodesData[epIdx].episode_number;
+                else if (focusZone === 'similar') openSimilar(simIdx);
             } else if (k === 461 || k === 8) { window.location.href = 'index.html'; }
             updateFocus();
         };
