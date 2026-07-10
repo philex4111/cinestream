@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>CineStream TV Player</title>
+    <style>
+        body { background: #000; margin: 0; padding: 0; overflow: hidden; width: 1280px; height: 720px; }
+        iframe { width: 100%; height: 100%; border: none; }
+        .back-hint {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(0,0,0,0.5); color: #fff; padding: 10px;
+            font-family: Arial; font-size: 14px; border-radius: 4px;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div class="back-hint">Press BACK on remote to exit</div>
+    <iframe id="player" allowfullscreen></iframe>
+
+    <script>
+        var params = new URLSearchParams(window.location.search);
+        var id = params.get('id');
+        var type = params.get('type') || 'movie';
+
+        // NetCast 4.0 may struggle with complex iframes,
+        // but we'll try the basic VidSrc embed first.
+        var embedUrl = "";
+        if (type === 'movie') {
+            embedUrl = "https://vidsrc.me/embed/movie?tmdb=" + id;
+        } else {
+            embedUrl = "https://vidsrc.me/embed/tv?tmdb=" + id + "&season=1&episode=1";
+        }
+
+        document.getElementById('player').src = embedUrl;
+
+        // Return handling
+        document.onkeydown = function(e) {
+            var keyCode = e.keyCode || e.which;
+            if (keyCode === 461 || keyCode === 8) {
+                window.location.href = 'index.html';
+            }
+        };
+    </script>
+</body>
+</html>
