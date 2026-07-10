@@ -151,11 +151,21 @@ var TVApp = {
             }
             else if (dir === 'right') {
                 var max = (this.data[this.rails[this.railIdx]] || []).length - 1;
-                if (this.cardIdx < max) this.cardIdx++;
+                if (this.cardIdx < max) {
+                    this.cardIdx++;
+                } else {
+                    this.cardIdx = 0; // Wrap around to first movie
+                }
             }
             else if (dir === 'left') {
-                if (this.cardIdx > 0) this.cardIdx--;
-                else { this.zone = 'nav'; this.navIdx = 0; }
+                if (this.cardIdx > 0) {
+                    this.cardIdx--;
+                } else {
+                    // Option: Wrap back to last or jump to nav.
+                    // To match the right-wrap, we wrap to end:
+                    var max = (this.data[this.rails[this.railIdx]] || []).length - 1;
+                    this.cardIdx = max;
+                }
             }
         }
         this.updateFocus();
@@ -192,7 +202,15 @@ var TVApp = {
             if (card) {
                 card.classList.add('tv-focused');
                 var slider = document.getElementById('slider-' + key);
-                slider.style.transform = 'translateX(-' + (this.cardIdx * 220) + 'px)';
+
+                // Fixed Position Logic:
+                // Don't scroll further once the last movie is visible on the right.
+                var maxIdx = (this.data[key] || []).length - 1;
+                var scrollIdx = this.cardIdx;
+                if (this.cardIdx === maxIdx && maxIdx > 0) {
+                    scrollIdx = maxIdx - 1; // Stay at the same scroll position as the second-to-last item
+                }
+                slider.style.transform = 'translateX(-' + (scrollIdx * 220) + 'px)';
 
                 // Shift whole content up. Each rail is 280px high.
                 var yShift = (this.railIdx * 250) + 210;
