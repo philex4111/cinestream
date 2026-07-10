@@ -165,29 +165,40 @@ var TVApp = {
         var all = document.querySelectorAll('.tv-focused, .tv-nav-focused');
         for(var i=0; i<all.length; i++) { all[i].classList.remove('tv-focused'); all[i].classList.remove('tv-nav-focused'); }
 
+        var scroller = document.querySelector('.tv-rails-container');
+        var hero = document.getElementById('hero');
+
         if (this.zone === 'nav') {
-            var items = document.querySelectorAll('.tv-nav-item, .navbar-logo');
-            if (items[this.navIdx]) items[this.navIdx].classList.add('tv-nav-focused');
+            var navItems = document.querySelectorAll('.tv-nav-item, .navbar-logo');
+            if (navItems[this.navIdx]) navItems[this.navIdx].classList.add('tv-nav-focused');
+            hero.style.transform = 'translateY(0)';
+            scroller.style.transform = 'translateY(0)';
         }
         else if (this.zone === 'hero') {
             var btns = document.querySelectorAll('.hero-actions .btn');
             if (btns[this.heroIdx]) btns[this.heroIdx].classList.add('tv-focused');
-            document.getElementById('hero').style.transform = 'translateY(0)';
-            document.getElementById('tv-rails').style.transform = 'translateY(0)';
+            hero.style.transform = 'translateY(0)';
+            scroller.style.transform = 'translateY(0)';
         }
         else if (this.zone === 'tab') {
             var tabs = document.querySelectorAll('.tab-tv');
             if (tabs[this.tabIdx]) tabs[this.tabIdx].classList.add('tv-nav-focused');
+            hero.style.transform = 'translateY(-150px)';
+            scroller.style.transform = 'translateY(-150px)';
         }
         else if (this.zone === 'rail') {
             var key = this.rails[this.railIdx];
             var card = document.getElementById('card-' + key + '-' + this.cardIdx);
             if (card) {
                 card.classList.add('tv-focused');
-                document.getElementById('slider-' + key).style.transform = 'translateX(-' + (this.cardIdx * 220) + 'px)';
-                var shift = Math.min(300, (this.railIdx + 1) * 120);
-                document.getElementById('hero').style.transform = 'translateY(-' + shift + 'px)';
-                document.getElementById('tv-rails').style.transform = 'translateY(-' + (this.railIdx * 320 + (this.railIdx > 0 ? 80 : 0)) + 'px)';
+                var slider = document.getElementById('slider-' + key);
+                slider.style.transform = 'translateX(-' + (this.cardIdx * 220) + 'px)';
+
+                // Shift whole content up. Each rail is 280px high.
+                var yShift = (this.railIdx * 280) + 250;
+                hero.style.transform = 'translateY(-' + Math.min(yShift, 450) + 'px)';
+                scroller.style.transform = 'translateY(-' + yShift + 'px)';
+
                 var item = this.data[key][this.cardIdx];
                 if (item) this.setHero(item);
             }
