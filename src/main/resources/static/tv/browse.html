@@ -6,26 +6,10 @@
     <link rel="stylesheet" href="../css/main.css">
     <link rel="stylesheet" href="css/tv.css">
     <style>
-        /* ── TV Grid Architecture (5-Column) ── */
-        .browse-stage { padding: 100px 60px 40px; }
-
-        .filter-bar-tv { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
-        .filter-group { display: flex; gap: 10px; align-items: center; }
-        .filter-label { font-size: 14px; color: var(--grey-3); font-weight: 700; text-transform: uppercase; margin-right: 5px; }
-
-        /* Custom TV Selectors */
-        .tv-select {
-            padding: 8px 16px; background: var(--grey-4); border-radius: 4px;
-            font-size: 16px; font-weight: 700; border: 2px solid transparent; color: #fff;
-        }
-        .tv-select.tv-focused { border-color: #fff; background: var(--crimson); }
-
-        .results-count-tv { font-size: 16px; color: var(--grey-2); margin-bottom: 20px; }
-
-        /* The Grid */
-        .grid-container { width: 100%; height: 450px; overflow: hidden; position: relative; }
-        .grid-scroller { display: block; transition: transform 0.4s ease-out; }
-        .tv-grid-row { display: flex; gap: 20px; margin-bottom: 20px; }
+        .browse-stage { padding: 80px 60px 40px; }
+        .grid-viewport { width: 100%; height: 500px; overflow: hidden; position: relative; }
+        .grid-container-scroller { display: block; transition: transform 0.4s ease-out; }
+        .grid-row { display: flex; gap: 20px; margin-bottom: 20px; }
 
         .tv-card-grid {
             width: 212px; height: 318px; flex-shrink: 0; position: relative;
@@ -34,16 +18,6 @@
         }
         .tv-card-grid img { width: 100%; height: 100%; object-fit: cover; }
         .tv-card-grid.tv-focused { border-color: #fff; transform: scale(1.05); z-index: 10; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
-
-        .card-info-tv {
-            position: absolute; bottom: 0; left: 0; right: 0; padding: 10px;
-            background: linear-gradient(transparent, rgba(0,0,0,0.9));
-        }
-        .card-title-tv { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-        /* Pagination Bar */
-        .pagination-tv { display: flex; justify-content: center; gap: 20px; margin-top: 30px; align-items: center; }
-        .page-info { font-size: 18px; font-weight: 700; color: #fff; }
     </style>
 </head>
 <body>
@@ -60,69 +34,36 @@
         </nav>
 
         <div class="browse-stage">
-            <!-- Filter Bar mirroring site logic -->
-            <div class="filter-bar-tv">
-                <div class="filter-group" id="type-filters">
-                    <div class="tab-tv active tv-focusable" data-type="all">All</div>
-                    <div class="tab-tv tv-focusable" data-type="movie">Movies</div>
-                    <div class="tab-tv tv-focusable" data-type="tv">Series</div>
-                </div>
-                <div style="width:1px; height:24px; background:var(--grey-4);"></div>
-                <div class="filter-group">
-                    <span class="filter-label">Genre:</span>
-                    <div id="genre-sel" class="tv-select tv-focusable">All Genres</div>
-                </div>
-                <div class="filter-group">
-                    <span class="filter-label">Sort:</span>
-                    <div id="sort-sel" class="tv-select tv-focusable">Popularity</div>
+            <div id="filter-bar-tv" style="display:flex; align-items:center; gap:20px; margin-bottom: 25px;">
+                <div class="tab-tv active" data-type="all">All</div>
+                <div class="tab-tv" data-type="movie">Movies</div>
+                <div class="tab-tv" data-type="tv">Series</div>
+                <div style="width:1px; height:30px; background:var(--grey-4); margin:0 10px;"></div>
+                <div id="results-info" style="color:var(--grey-3); font-size:16px; font-weight:700;">Loading...</div>
+            </div>
+
+            <div class="grid-viewport">
+                <div class="grid-container-scroller" id="grid-scroller">
+                    <!-- Virtual Rows -->
                 </div>
             </div>
 
-            <div class="results-count-tv" id="results-info">Loading titles...</div>
-
-            <!-- Full Grid Architecture -->
-            <div class="grid-container">
-                <div class="grid-scroller" id="grid-scroller">
-                    <!-- Cards will be injected in rows of 5 -->
-                </div>
-            </div>
-
-            <!-- Pagination mirroring site -->
-            <div class="pagination-tv" id="pagination-bar">
-                <div class="btn btn-secondary tv-focusable" id="prev-page">Previous</div>
-                <div class="page-info" id="page-display">Page 1 of 500</div>
-                <div class="btn btn-secondary tv-focusable" id="next-page">Next Page</div>
+            <div class="pagination-tv" style="display:flex; justify-content:center; gap:30px; margin-top:30px; align-items:center;">
+                <div class="btn btn-secondary" id="btn-prev">Previous</div>
+                <div id="page-info" style="font-size:18px; font-weight:700; color:#fff;">Page 1 of 500</div>
+                <div class="btn btn-secondary" id="btn-next">Next Page</div>
             </div>
         </div>
 
         <div class="tv-status" id="tv-status">Fetching Titles...</div>
     </div>
 
-    <!-- Legacy Compatible JS -->
     <script>
-        var state = {
-            type: 'all',
-            genre: '',
-            sort: 'popularity.desc',
-            page: 1,
-            totalPages: 500,
-            results: []
-        };
-
-        var nav = {
-            zone: 'grid', // 'nav', 'filter', 'grid', 'page'
-            navIdx: 1,
-            filterIdx: 0,
-            gridIdx: 0,
-            pageIdx: 0,
-            cols: 5
-        };
-
-        var genreMap = { movie: [], tv: [] };
+        var state = { type: 'all', page: 1, totalPages: 500, results: [] };
+        var nav = { zone: 'grid', navIdx: 1, tabIdx: 0, gridIdx: 0, pageIdx: 0, cols: 5 };
 
         function init() {
             bindKeys();
-            loadGenres();
             loadContent();
         }
 
@@ -138,31 +79,15 @@
             };
         }
 
-        function loadGenres() {
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', '/api/tmdb/genre/movie/list', true);
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState === 4 && xhr.status === 200) {
-                    genreMap.movie = JSON.parse(xhr.responseText).genres || [];
-                }
-            };
-            xhr.send();
-            // Fetch TV genres too
-            var xhr2 = new XMLHttpRequest();
-            xhr2.open('GET', '/api/tmdb/genre/tv/list', true);
-            xhr2.onreadystatechange = function() {
-                if (xhr2.readyState === 4 && xhr2.status === 200) {
-                    genreMap.tv = JSON.parse(xhr2.responseText).genres || [];
-                }
-            };
-            xhr2.send();
-        }
-
         function loadContent() {
             status('Fetching Page ' + state.page + '...');
             var xhr = new XMLHttpRequest();
             var path = state.type === 'movie' ? '/tmdb/movie/popular' : (state.type === 'tv' ? '/tmdb/tv/popular' : '/tmdb/trending?time=day');
-            xhr.open('GET', '/api' + path + '?page=' + state.page, true);
+
+            // Fix: ensure correct query parameter marker (? vs &)
+            var separator = path.indexOf('?') !== -1 ? '&' : '?';
+            xhr.open('GET', '/api' + path + separator + 'page=' + state.page, true);
+
             xhr.onreadystatechange = function() {
                 if (xhr.readyState === 4 && xhr.status === 200) {
                     var data = JSON.parse(xhr.responseText);
@@ -170,6 +95,8 @@
                     state.totalPages = Math.min(data.total_pages || 500, 500);
                     renderGrid();
                     status('');
+                } else if (xhr.readyState === 4) {
+                    status('Error loading data.', true);
                 }
             };
             xhr.send();
@@ -186,17 +113,18 @@
 
                 rowHtml += '<div class="tv-card-grid" id="card-' + i + '">' +
                            '<img src="' + img + '">' +
-                           '<div class="card-info-tv"><div class="card-title-tv">' + (item.title || item.name) + '</div></div>' +
-                           '</div>';
+                           '<div class="card-info-tv" style="position:absolute; bottom:0; left:0; right:0; padding:10px; background:linear-gradient(transparent, rgba(0,0,0,0.9));">' +
+                           '<div style="font-size:14px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + (item.title || item.name) + '</div>' +
+                           '</div></div>';
 
                 if ((i + 1) % nav.cols === 0 || i === state.results.length - 1) {
-                    html += '<div class="tv-grid-row">' + rowHtml + '</div>';
+                    html += '<div class="grid-row">' + rowHtml + '</div>';
                     rowHtml = '';
                 }
             }
             scroller.innerHTML = html;
-            document.getElementById('page-display').innerHTML = 'Page ' + state.page + ' of ' + state.totalPages;
-            document.getElementById('results-info').innerHTML = state.results.length + ' Titles on this Page';
+            document.getElementById('page-info').innerHTML = 'Page ' + state.page + ' of ' + state.totalPages;
+            document.getElementById('results-info').innerHTML = state.results.length + ' Popular Titles';
             updateFocus();
         }
 
@@ -204,25 +132,24 @@
             if (nav.zone === 'nav') {
                 if (dir === 'right' && nav.navIdx < 4) nav.navIdx++;
                 else if (dir === 'left' && nav.navIdx > 0) nav.navIdx--;
-                else if (dir === 'down') nav.zone = 'filter';
+                else if (dir === 'down') nav.zone = 'tab';
             }
-            else if (nav.zone === 'filter') {
+            else if (nav.zone === 'tab') {
                 if (dir === 'up') nav.zone = 'nav';
-                else if (dir === 'down') nav.zone = 'grid';
-                else if (dir === 'right' && nav.filterIdx < 4) nav.filterIdx++;
-                else if (dir === 'left' && nav.filterIdx > 0) nav.filterIdx--;
+                else if (dir === 'down') { nav.zone = 'grid'; nav.gridIdx = 0; }
+                else if (dir === 'right' && nav.tabIdx < 2) nav.tabIdx++;
+                else if (dir === 'left' && nav.tabIdx > 0) nav.tabIdx--;
             }
             else if (nav.zone === 'grid') {
                 if (dir === 'up') {
                     if (nav.gridIdx >= nav.cols) nav.gridIdx -= nav.cols;
-                    else nav.zone = 'filter';
-                }
-                else if (dir === 'down') {
+                    else nav.zone = 'tab';
+                } else if (dir === 'down') {
                     if (nav.gridIdx + nav.cols < state.results.length) nav.gridIdx += nav.cols;
-                    else nav.zone = 'page';
-                }
-                else if (dir === 'right' && nav.gridIdx < state.results.length - 1) nav.gridIdx++;
-                else if (dir === 'left') {
+                    else { nav.zone = 'page'; nav.pageIdx = 0; }
+                } else if (dir === 'right' && nav.gridIdx < state.results.length - 1) {
+                    nav.gridIdx++;
+                } else if (dir === 'left') {
                     if (nav.gridIdx % nav.cols > 0) nav.gridIdx--;
                     else { nav.zone = 'nav'; nav.navIdx = 0; }
                 }
@@ -243,54 +170,48 @@
                 var items = document.querySelectorAll('.tv-nav-item, .navbar-logo');
                 if (items[nav.navIdx]) items[nav.navIdx].classList.add('tv-nav-focused');
             }
-            else if (nav.zone === 'filter') {
-                var items = document.querySelectorAll('.tab-tv, .tv-select');
-                if (items[nav.filterIdx]) items[nav.filterIdx].classList.add('tv-focused');
+            else if (nav.zone === 'tab') {
+                var tabs = document.querySelectorAll('.tab-tv');
+                if (tabs[nav.tabIdx]) tabs[nav.tabIdx].classList.add('tv-nav-focused');
             }
             else if (nav.zone === 'grid') {
                 var card = document.getElementById('card-' + nav.gridIdx);
                 if (card) {
                     card.classList.add('tv-focused');
-                    // Scroll logic
                     var row = Math.floor(nav.gridIdx / nav.cols);
                     document.getElementById('grid-scroller').style.transform = 'translateY(-' + (row * 338) + 'px)';
                 }
             }
             else if (nav.zone === 'page') {
-                var items = [document.getElementById('prev-page'), document.getElementById('next-page')];
-                if (items[nav.pageIdx]) items[nav.pageIdx].classList.add('tv-focused');
+                var btns = [document.getElementById('btn-prev'), document.getElementById('btn-next')];
+                if (btns[nav.pageIdx]) btns[nav.pageIdx].classList.add('tv-focused');
             }
         }
 
         function enter() {
-            if (nav.zone === 'nav') {
-                window.location.href = document.querySelectorAll('.tv-nav-item, .navbar-logo')[nav.navIdx].getAttribute('href');
-            }
-            else if (nav.zone === 'filter') {
-                var items = document.querySelectorAll('.tab-tv, .tv-select');
-                var item = items[nav.filterIdx];
-                if (item.hasAttribute('data-type')) {
-                    state.type = item.getAttribute('data-type');
-                    for(var i=0; i<3; i++) items[i].classList.remove('active');
-                    item.classList.add('active');
-                    state.page = 1;
-                    loadContent();
-                }
+            if (nav.zone === 'nav') window.location.href = document.querySelectorAll('.tv-nav-item, .navbar-logo')[nav.navIdx].getAttribute('href');
+            else if (nav.zone === 'tab') {
+                var tabs = document.querySelectorAll('.tab-tv');
+                state.type = tabs[nav.tabIdx].getAttribute('data-type');
+                for(var i=0; i<tabs.length; i++) tabs[i].className = 'tab-tv';
+                tabs[nav.tabIdx].className = 'tab-tv active';
+                state.page = 1;
+                loadContent();
             }
             else if (nav.zone === 'grid') {
                 var item = state.results[nav.gridIdx];
                 if (item) window.location.href = 'detail.html?id=' + item.id + '&type=' + (item.media_type || (item.first_air_date ? 'tv' : 'movie'));
             }
             else if (nav.zone === 'page') {
-                if (nav.pageIdx === 0 && state.page > 1) { state.page--; nav.zone = 'grid'; nav.gridIdx = 0; loadContent(); }
-                else if (nav.pageIdx === 1 && state.page < state.totalPages) { state.page++; nav.zone = 'grid'; nav.gridIdx = 0; loadContent(); }
+                if (nav.pageIdx === 0 && state.page > 1) { state.page--; loadContent(); }
+                else if (nav.pageIdx === 1 && state.page < state.totalPages) { state.page++; loadContent(); }
             }
         }
 
-        function status(m) {
-            var s = document.getElementById('tv-status');
-            s.innerHTML = m;
-            s.className = m ? 'tv-status' : 'tv-status hidden';
+        function status(m, err) {
+            var el = document.getElementById('tv-status');
+            el.innerHTML = m;
+            el.className = m ? 'tv-status' + (err ? ' error' : '') : 'tv-status hidden';
         }
 
         init();
