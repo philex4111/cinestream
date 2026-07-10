@@ -60,10 +60,11 @@ html, body {
 
 /* ── Rails / Rows ──────────────────────────────────────────── */
 .tv-rails-container {
-    position: relative; top: -50px; z-index: 20;
+    position: relative; top: -60px; z-index: 20;
     transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    background: #050505;
 }
-.tv-section { padding: 0 60px 30px; height: 280px; }
+.tv-section { padding: 0 60px 30px; height: 350px; }
 .section-title { font-size: 20px; font-weight: 700; color: #b3b3b3; margin-bottom: 15px; text-transform: uppercase; }
 .slider-wrap { width: 100%; overflow: hidden; }
 .tv-slider { display: flex; gap: 20px; transition: transform 0.4s ease-out; }
@@ -111,18 +112,18 @@ html, body {
 ::-webkit-scrollbar { display: none; }
 
 /* ── TV home: viewport-safe rail composition ──────────────── */
-.tv-stage .tv-hero { height: 372px; }
-.tv-stage .hero-content { bottom: 34px; max-width: 620px; }
-.tv-stage .hero-title { font-size: 46px; line-height: 1.04; margin-bottom: 10px; }
-.tv-stage .hero-meta { font-size: 16px; margin-bottom: 10px; }
-.tv-stage .hero-overview { font-size: 16px; line-height: 1.4; margin: 0 0 18px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.tv-stage .hero-actions .btn { padding: 10px 24px; font-size: 16px; }
-.tv-stage .tv-rails-container { top: -18px; }
-.tv-stage .tv-section { height: 250px; padding: 0 60px 20px; box-sizing: border-box; }
-.tv-stage .section-title { margin-bottom: 10px; font-size: 18px; }
+.tv-stage .tv-hero { height: 440px; }
+.tv-stage .hero-content { bottom: 60px; max-width: 720px; }
+.tv-stage .hero-title { font-size: 56px; line-height: 1.04; margin-bottom: 15px; }
+.tv-stage .hero-meta { font-size: 18px; margin-bottom: 12px; }
+.tv-stage .hero-overview { font-size: 18px; line-height: 1.5; margin: 0 0 25px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.tv-stage .hero-actions .btn { padding: 12px 30px; font-size: 18px; }
+.tv-stage .tv-rails-container { top: -60px; position: relative; z-index: 20; background: #050505; }
+.tv-stage .tv-section { height: 350px; padding: 0 60px 40px; box-sizing: border-box; }
+.tv-stage .section-title { margin-bottom: 18px; font-size: 22px; font-weight: 700; color: #fff; }
 .tv-stage .tv-card { width: 156px; border-width: 3px; }
 .tv-stage .card-poster { aspect-ratio: 2 / 3; object-fit: cover; }
-.tv-stage .card-overlay { padding: 8px; }
-.tv-stage .card-overlay-title { font-size: 13px; }
-.tv-stage .tv-slider { gap: 16px; }
-.tv-stage .section-header { min-height: 32px; }
+.tv-stage .card-overlay { padding: 10px; }
+.tv-stage .card-overlay-title { font-size: 14px; }
+.tv-stage .tv-slider { gap: 20px; }
+.tv-stage .section-header { min-height: 40px; margin-bottom: 10px; }
