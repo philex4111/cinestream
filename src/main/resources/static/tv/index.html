@@ -1,32 +1,79 @@
-<!DOCTYPE html>
-<html>
+﻿<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CineStream TV</title>
     <link rel="stylesheet" href="css/tv.css">
-    <!-- Google Fonts might be too heavy for NetCast, using Arial fallback in CSS -->
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="logo">CineStream</div>
+<div class="tv-app">
+    <aside class="side-nav" aria-label="Main navigation">
+        <div class="brand">
+            <span class="brand-mark">C</span>
+            <span class="brand-name">CineStream</span>
         </div>
 
-        <div class="hero" id="hero">
-            <div class="hero-overlay">
-                <h1 class="hero-title" id="hero-title">Welcome to CineStream</h1>
-                <p class="hero-overview" id="hero-overview">Select a movie or series to start watching.</p>
+        <div class="nav-items">
+            <button class="nav-item focused" data-nav="home">
+                <span class="nav-icon">&#8962;</span><span>Home</span>
+            </button>
+            <button class="nav-item" data-nav="search">
+                <span class="nav-icon">&#9906;</span><span>Search</span>
+            </button>
+            <button class="nav-item" data-nav="movies">
+                <span class="nav-icon">&#9654;</span><span>Movies</span>
+            </button>
+            <button class="nav-item" data-nav="series">
+                <span class="nav-icon">&#9776;</span><span>TV Shows</span>
+            </button>
+        </div>
+
+        <div class="nav-hint">Use your remote<br>to browse</div>
+    </aside>
+
+    <main class="content">
+        <section class="hero" id="hero">
+            <div class="hero-shade"></div>
+
+            <div class="hero-copy">
+                <div class="eyebrow">CINESTREAM FEATURED</div>
+                <h1 id="hero-title">Loading your next great watch</h1>
+                <div class="hero-meta" id="hero-meta"></div>
+                <p id="hero-overview">
+                    Please wait while we bring the latest movies and shows to your screen.
+                </p>
+
+                <div class="hero-actions">
+                    <button class="hero-play" id="hero-play">
+                        <span>&#9654;</span> Play
+                    </button>
+                    <button class="hero-info" id="hero-info">More Info</button>
+                </div>
             </div>
+        </section>
+
+        <div class="rails">
+            <section class="media-row" id="row-trending">
+                <h2>Trending Now</h2>
+                <div class="row-viewport"><div class="poster-row"></div></div>
+            </section>
+
+            <section class="media-row" id="row-movies">
+                <h2>Popular Movies</h2>
+                <div class="row-viewport"><div class="poster-row"></div></div>
+            </section>
+
+            <section class="media-row" id="row-series">
+                <h2>Popular TV Shows</h2>
+                <div class="row-viewport"><div class="poster-row"></div></div>
+            </section>
         </div>
 
-        <h2 class="section-title">Trending Now</h2>
-        <div id="poster-grid-container" style="width: 100%; overflow: hidden;">
-            <div class="row" id="poster-grid">
-                <!-- Posters will be injected here -->
-            </div>
-        </div>
-    </div>
+        <div class="status-message" id="status-message">Loading...</div>
+    </main>
+</div>
 
-    <script src="js/app.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>
