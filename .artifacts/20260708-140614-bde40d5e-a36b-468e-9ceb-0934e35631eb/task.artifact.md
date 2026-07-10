@@ -1,11 +1,24 @@
 # Task Management
 
-- [/] Prepare for Railway Deployment
+- [x] Prepare for Railway Deployment
     - [x] Research existing project structure
     - [x] Verify `application.conf` environment variables
-    - [/] Determine exact Fat JAR name
-    - [ ] Create `Procfile`
-    - [ ] Create `system.properties`
-    - [ ] Verify CORS configuration in `HTTP.kt`
-    - [ ] Check if `shadowJar` task is correctly configured
-- [ ] Finalize Deployment Plan
+    - [x] Determine exact Fat JAR name
+    - [x] Create `Procfile`
+    - [x] Create `system.properties`
+    - [x] Verify CORS configuration in `HTTP.kt`
+    - [x] Check if `shadowJar` task is correctly configured
+- [x] Initial TV Implementation (Phase 2 & 3)
+    - [x] Create TV directory structure
+    - [x] Create legacy-compatible `tv.css`
+    - [x] Implement base ES5 Focus Engine in `app.js`
+    - [x] Create `index.html` dashboard
+    - [x] Create `player.html` for TV
+- [/] Enhance TV Remote Features (Phase 3 & 4)
+    - [/] Sync Hero section with selected poster
+    - [ ] Implement "Back" navigation handling
+    - [ ] Add loading indicators for TV
+    - [ ] Refine visual feedback for "Enter" (click effect)
+- [ ] Connect TV UI to Full API (Phase 4)
+    - [ ] Add more rows (Popular, TV Shows)
+    - [ ] Implement row-to-row navigation (Up/Down)
