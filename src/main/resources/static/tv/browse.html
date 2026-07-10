@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CineStream TV — Browse</title>
+    <title>CineStream TV - Browse</title>
     <link rel="stylesheet" href="../css/main.css">
     <link rel="stylesheet" href="css/tv.css">
     <style>
@@ -81,25 +81,49 @@
 
         function loadContent() {
             status('Fetching Page ' + state.page + '...');
-            var xhr = new XMLHttpRequest();
-            var path = state.type === 'movie' ? '/tmdb/movie/popular' : (state.type === 'tv' ? '/tmdb/tv/popular' : '/tmdb/trending?time=day');
+            var moviePath = '/tmdb/movie/popular?page=' + state.page;
+            var tvPath = '/tmdb/tv/popular?page=' + state.page;
 
-            // Fix: ensure correct query parameter marker (? vs &)
-            var separator = path.indexOf('?') !== -1 ? '&' : '?';
-            xhr.open('GET', '/api' + path + separator + 'page=' + state.page, true);
+            function normalize(items) {
+                return (items || []).filter(function(item) { return item && item.poster_path; }).map(function(item) {
+                    if (!item.media_type) item.media_type = item.first_air_date ? 'tv' : 'movie';
+                    return item;
+                });
+            }
+            function apply(items, total) {
+                state.results = normalize(items);
+                state.totalPages = Math.min(total || 1, 500);
+                nav.gridIdx = 0;
+                document.getElementById('grid-scroller').style.transform = 'translateY(0)';
+                renderGrid();
+                status('');
+            }
+            function fail() { status('Error loading the catalog. Please try again.', true); }
+            function request(path, done) {
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', '/api' + path, true);
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState !== 4) return;
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try { done(JSON.parse(xhr.responseText)); } catch (e) { fail(); }
+                    } else fail();
+                };
+                xhr.send();
+            }
 
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState === 4 && xhr.status === 200) {
-                    var data = JSON.parse(xhr.responseText);
-                    state.results = data.results || [];
-                    state.totalPages = Math.min(data.total_pages || 500, 500);
-                    renderGrid();
-                    status('');
-                } else if (xhr.readyState === 4) {
-                    status('Error loading data.', true);
+            if (state.type === 'all') {
+                var movies, series, failed = false;
+                function complete() {
+                    if (failed || !movies || !series) return;
+                    apply((movies.results || []).concat(series.results || []), Math.max(movies.total_pages || 1, series.total_pages || 1));
                 }
-            };
-            xhr.send();
+                request(moviePath, function(data) { movies = data; complete(); });
+                request(tvPath, function(data) { series = data; complete(); });
+            } else {
+                request(state.type === 'movie' ? moviePath : tvPath, function(data) {
+                    apply(data.results || [], data.total_pages || 1);
+                });
+            }
         }
 
         function renderGrid() {
@@ -124,13 +148,13 @@
             }
             scroller.innerHTML = html;
             document.getElementById('page-info').innerHTML = 'Page ' + state.page + ' of ' + state.totalPages;
-            document.getElementById('results-info').innerHTML = state.results.length + ' Popular Titles';
+            document.getElementById('results-info').innerHTML = state.results.length + ' titles - Page ' + state.page + ' of ' + state.totalPages;
             updateFocus();
         }
 
         function move(dir) {
             if (nav.zone === 'nav') {
-                if (dir === 'right' && nav.navIdx < 4) nav.navIdx++;
+                if (dir === 'right' && nav.navIdx < 5) nav.navIdx++;
                 else if (dir === 'left' && nav.navIdx > 0) nav.navIdx--;
                 else if (dir === 'down') nav.zone = 'tab';
             }
@@ -146,7 +170,7 @@
                     else nav.zone = 'tab';
                 } else if (dir === 'down') {
                     if (nav.gridIdx + nav.cols < state.results.length) nav.gridIdx += nav.cols;
-                    else { nav.zone = 'page'; nav.pageIdx = 0; }
+                    else { nav.zone = 'page'; nav.pageIdx = state.page > 1 ? 0 : 1; }
                 } else if (dir === 'right' && nav.gridIdx < state.results.length - 1) {
                     nav.gridIdx++;
                 } else if (dir === 'left') {
