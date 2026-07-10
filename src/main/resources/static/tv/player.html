@@ -1,44 +1,74 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CineStream TV Player</title>
+    <title>CineStream TV — Player</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="css/tv.css">
     <style>
-        body { background: #000; margin: 0; padding: 0; overflow: hidden; width: 1280px; height: 720px; }
-        iframe { width: 100%; height: 100%; border: none; }
-        .back-hint {
-            position: absolute; top: 20px; left: 20px;
-            background: rgba(0,0,0,0.5); color: #fff; padding: 10px;
-            font-family: Arial; font-size: 14px; border-radius: 4px;
-            z-index: 100;
+        body { background: #000; margin: 0; padding: 0; overflow: hidden; }
+        .player-frame { width: 100vw; height: 100vh; border: none; }
+        .player-overlay-tv {
+            position: absolute; top: 30px; left: 40px;
+            background: rgba(0,0,0,0.6); padding: 15px 25px;
+            border-radius: var(--radius-md); color: #fff;
+            font-family: 'Inter', sans-serif; pointer-events: none;
+            opacity: 1; transition: opacity 0.5s;
         }
+        .player-overlay-tv.hidden { opacity: 0; }
     </style>
 </head>
 <body>
-    <div class="back-hint">Press BACK on remote to exit</div>
-    <iframe id="player" allowfullscreen></iframe>
+    <div class="player-overlay-tv" id="overlay">
+        <h2 id="title" style="font-size: 24px; margin-bottom: 5px;">Loading...</h2>
+        <p id="subtitle" style="font-size: 14px; color: var(--grey-2);"></p>
+        <p style="font-size: 12px; margin-top: 10px; color: var(--crimson);">Press BACK on remote to exit</p>
+    </div>
+
+    <iframe id="player" class="player-frame" allowfullscreen allow="autoplay; fullscreen"></iframe>
 
     <script>
-        var params = new URLSearchParams(window.location.search);
-        var id = params.get('id');
-        var type = params.get('type') || 'movie';
+        var p = new URLSearchParams(window.location.search);
+        var id = p.get('id');
+        var type = p.get('type') || 'movie';
+        var season = p.get('season') || '1';
+        var episode = p.get('episode') || '1';
 
-        // NetCast 4.0 may struggle with complex iframes,
-        // but we'll try the basic VidSrc embed first.
+        // Set Title
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '/api/tmdb/' + type + '/' + id, true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                var data = JSON.parse(xhr.responseText);
+                document.getElementById('title').innerHTML = data.title || data.name;
+                if (type === 'tv') {
+                    document.getElementById('subtitle').innerHTML = 'Season ' + season + ' • Episode ' + episode;
+                } else {
+                    document.getElementById('subtitle').innerHTML = (data.release_date || '').substring(0,4);
+                }
+            }
+        };
+        xhr.send();
+
+        // Load Stream
         var embedUrl = "";
         if (type === 'movie') {
             embedUrl = "https://vidsrc.me/embed/movie?tmdb=" + id;
         } else {
-            embedUrl = "https://vidsrc.me/embed/tv?tmdb=" + id + "&season=1&episode=1";
+            embedUrl = "https://vidsrc.me/embed/tv?tmdb=" + id + "&season=" + season + "&episode=" + episode;
         }
-
         document.getElementById('player').src = embedUrl;
 
-        // Return handling
+        // Auto-hide overlay
+        setTimeout(function() {
+            document.getElementById('overlay').className += ' hidden';
+        }, 5000);
+
+        // Remote Back Handling
         document.onkeydown = function(e) {
-            var keyCode = e.keyCode || e.which;
-            if (keyCode === 461 || keyCode === 8) {
-                window.location.href = 'index.html';
+            var k = e.keyCode || e.which;
+            if (k === 461 || k === 8) {
+                window.location.href = 'detail.html?id=' + id + '&type=' + type;
             }
         };
     </script>

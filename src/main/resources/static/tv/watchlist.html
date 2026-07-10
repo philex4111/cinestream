@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CineStream TV — Watchlist</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="css/tv.css">
+    <style>
+        .watchlist-container { padding: 40px 56px; }
+        .empty-state { padding: 100px; text-align: center; color: var(--grey-3); font-size: 18px; }
+    </style>
+</head>
+<body>
+    <div class="tv-shell">
+        <div class="watchlist-container">
+            <h1 class="section-title">My Watchlist</h1>
+            <div id="slider-watchlist-wrap">
+                <div class="slider tv-slider" id="slider-watchlist" style="display: flex; gap: 15px;">
+                    <!-- Watchlist items -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        // Override for Watchlist
+        TVApp.loadAllData = function() {
+            var self = this;
+            var xhr = new XMLHttpRequest();
+            var token = localStorage.getItem('token'); // Use standard key from auth.js
+
+            xhr.open('GET', this.API_BASE + '/watchlist', true);
+            if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        var results = JSON.parse(xhr.responseText);
+                        // The Ktor API returns List<WatchlistEntry> which are {tmdbId, mediaType}
+                        // For TV, we usually need to fetch the full details for posters.
+                        // For now, we'll render a simple "Poster Fetcher" or show IDs.
+                        self.renderWatchlist(results);
+                    } else if (xhr.status === 401) {
+                        window.location.href = 'login.html';
+                    }
+                }
+            };
+            xhr.send();
+        };
+
+        TVApp.renderWatchlist = function(items) {
+            var slider = document.getElementById('slider-watchlist');
+            if (!items.length) {
+                slider.innerHTML = '<div class="empty-state">Your watchlist is empty.</div>';
+                return;
+            }
+
+            var self = this;
+            this.data['watchlist'] = items;
+            this.rails = ['watchlist'];
+
+            var html = '';
+            for (var i = 0; i < items.length; i++) {
+                var item = items[i];
+                // Placeholder poster since watchlist API only returns IDs
+                html += '<article class="card tv-card" id="poster-watchlist-' + i + '">' +
+                        '<div class="card-poster" style="display:flex;align-items:center;justify-content:center;background:#222;color:#fff;font-size:12px;text-align:center;padding:10px;">' +
+                        'TMDB ID: ' + item.tmdbId + '<br>' + item.mediaType + '</div>' +
+                        '</article>';
+            }
+            slider.innerHTML = html;
+            this.updateFocus();
+        };
+
+        TVApp.init();
+    </script>
+</body>
+</html>

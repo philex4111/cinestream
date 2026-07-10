@@ -1,35 +1,109 @@
-﻿/* TV-only layer: inherits CineStream's shared design system from /css/main.css. */
-html, body { width:100%; height:100%; overflow:hidden; }
-.tv-shell { min-width:960px; height:100%; background:var(--bg); }
-.tv-navbar { background:linear-gradient(to bottom,rgba(10,10,10,.88),transparent); }
-.tv-navbar .logo-icon { color:#fff; font-size:14px; line-height:32px; text-align:center; }
-.tv-nav-action { font-size:24px; text-decoration:none; }
-.tv-sign-in { padding:7px 18px; font-size:13px; }
-.tv-stage { position:absolute; top:0; right:0; bottom:0; left:0; overflow:hidden; }
-.tv-hero { height:52vh; min-height:330px; max-height:415px; }
-.tv-hero .hero-content { padding:0 56px 38px; max-width:585px; }
-.tv-hero .hero-title { font-size:54px; }
-.tv-hero .hero-overview { margin-bottom:20px; }
-.tv-hero .hero-dots { right:44px; bottom:24px; }
-.tv-rails { position:absolute; z-index:4; top:47vh; right:0; bottom:0; left:0; overflow:hidden; padding-bottom:12px; }
-.tv-section { padding:13px 0 7px; height:150px; }
-.tv-section .section-header { padding:0 40px; margin-bottom:9px; }
-.tv-section .section-title { font-size:17px; gap:10px; }
-.tv-section .section-title::before { width:3px; height:18px; }
-.tv-section .slider-wrap { padding:0 40px; }
-.tv-slider { min-height:102px; gap:12px; overflow:hidden; padding:5px 0 10px; }
-.tv-card { width:154px; height:94px; flex:0 0 154px; overflow:visible; border-radius:var(--radius-sm); background:none; transform:none; box-shadow:none; }
-.tv-card .card-poster { width:154px; height:94px; aspect-ratio:auto; border-radius:var(--radius-sm); object-fit:cover; background:var(--bg-elevated); }
-.tv-card .card-info { display:none; }
-.tv-card .card-overlay { padding:9px; border-radius:var(--radius-sm); }
-.tv-card .card-overlay-title { font-size:12px; }
-.tv-card .card-overlay-actions { display:none; }
-.tv-card:hover, .tv-card.tv-focused { transform:scale(1.09); z-index:10; box-shadow:0 10px 28px rgba(0,0,0,.72); }
-.tv-card.tv-focused .card-poster { outline:3px solid var(--white); box-shadow:0 0 0 5px var(--crimson); }
-.tv-card.tv-focused .card-overlay { opacity:1; }
-.tv-focusable.tv-focused { outline:3px solid var(--crimson); outline-offset:3px; transform:scale(1.04); }
-.tv-nav-focused { outline:2px solid var(--crimson); outline-offset:2px; }
-.tv-status { position:absolute; z-index:30; top:52%; left:50%; transform:translate(-50%,-50%); padding:10px 16px; border-radius:var(--radius-sm); color:var(--grey-1); background:var(--bg-overlay); font-size:13px; }
-.tv-status.hidden { display:none; }
-.tv-status.error { color:#ffb0b0; }
-@media (max-width:1000px) { .navbar { padding:0 22px; gap:14px; } .tv-hero .hero-content { padding-left:32px; } .tv-section .section-header,.tv-section .slider-wrap { padding-left:24px; padding-right:24px; } .tv-card,.tv-card .card-poster { width:132px; } .tv-card { flex-basis:132px; } .tv-card .card-poster { height:81px; } }
+﻿/* CineStream TV: Legacy CSS for LG NetCast 4.0 (2013-2014) */
+html, body {
+    width: 1280px; height: 720px; /* Fixed HD resolution */
+    margin: 0; padding: 0; overflow: hidden;
+    background: #050505; color: #fff;
+    font-family: 'Inter', Arial, sans-serif;
+}
+
+.tv-shell { width: 100%; height: 100%; position: relative; }
+
+/* ── Navbar ────────────────────────────────────────────────── */
+.tv-navbar {
+    height: 80px; padding: 0 60px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+    position: absolute; top: 0; left: 0; right: 0; z-index: 100;
+}
+.navbar-logo {
+    font-size: 28px; font-weight: 800; color: #E50914;
+    text-decoration: none; text-transform: uppercase; letter-spacing: 2px;
+}
+.navbar-links { display: flex; gap: 30px; margin-left: 50px; flex: 1; }
+.tv-nav-item {
+    color: #b3b3b3; text-decoration: none; font-size: 18px; font-weight: 600;
+    padding: 8px 16px; border-radius: 4px; border: 2px solid transparent;
+}
+.tv-nav-item.active { color: #fff; }
+.tv-nav-item.tv-nav-focused, .navbar-logo.tv-nav-focused {
+    border-color: #E50914; background: rgba(229, 9, 20, 0.2); color: #fff;
+}
+
+/* ── Hero ──────────────────────────────────────────────────── */
+.tv-hero {
+    height: 450px; position: relative; overflow: hidden;
+    background-size: cover; background-position: center;
+    transition: background-image 0.4s ease-in-out;
+}
+.hero-backdrop-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to right, rgba(5,5,5,1) 15%, rgba(5,5,5,0.7) 40%, transparent 100%),
+                linear-gradient(to top, rgba(5,5,5,1) 0%, transparent 50%);
+}
+.hero-content {
+    position: absolute; bottom: 60px; left: 60px; z-index: 10; max-width: 700px;
+}
+.hero-badge { color: #E50914; font-size: 14px; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; }
+.hero-title { font-size: 54px; margin-bottom: 15px; font-weight: 800; }
+.hero-meta { display: flex; gap: 15px; font-size: 18px; color: #b3b3b3; margin-bottom: 15px; }
+.hero-overview { font-size: 18px; color: #ccc; line-height: 1.5; margin-bottom: 25px; }
+.hero-actions { display: flex; gap: 15px; }
+
+/* ── Buttons ───────────────────────────────────────────────── */
+.btn {
+    padding: 12px 30px; font-size: 18px; font-weight: 700; border-radius: 4px;
+    border: 3px solid transparent; text-decoration: none; display: inline-block;
+}
+.btn-primary { background: #E50914; color: #fff; }
+.btn-secondary { background: rgba(255,255,255,0.1); color: #fff; }
+.btn.tv-focused { border-color: #fff; transform: scale(1.05); }
+
+/* ── Rails / Rows ──────────────────────────────────────────── */
+.tv-rails-container {
+    position: absolute; top: 400px; left: 0; right: 0; bottom: 0;
+    overflow: hidden; padding-top: 20px;
+}
+.tv-rails-scroller { transition: transform 0.4s ease-out; }
+.tv-section { padding: 0 60px 30px; height: 320px; }
+.section-title { font-size: 20px; font-weight: 700; color: #b3b3b3; margin-bottom: 15px; text-transform: uppercase; }
+.slider-wrap { width: 100%; overflow: hidden; }
+.tv-slider { display: flex; gap: 20px; transition: transform 0.4s ease-out; }
+
+/* ── Cards ─────────────────────────────────────────────────── */
+.tv-card {
+    width: 200px; flex-shrink: 0; position: relative; border: 4px solid transparent;
+    border-radius: 8px; overflow: hidden; transition: transform 0.2s;
+}
+.card-poster { width: 100%; display: block; }
+.card-overlay {
+    position: absolute; bottom: 0; left: 0; right: 0; padding: 10px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.9));
+}
+.card-overlay-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.tv-card.tv-focused { border-color: #fff; transform: scale(1.1); z-index: 50; }
+
+/* ── Specific elements from site ───────────────────────────── */
+.tab-tv {
+    padding: 6px 16px; font-size: 14px; font-weight: 700; color: #b3b3b3;
+    background: rgba(255,255,255,0.05); border-radius: 50px; border: 2px solid transparent;
+    text-transform: uppercase; letter-spacing: 1px;
+}
+.tab-tv.active { background: #E50914; color: #fff; }
+.tab-tv.tv-nav-focused { border-color: #fff; transform: scale(1.05); }
+
+.hero-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.3);
+}
+.hero-dot.active { background: #E50914; width: 25px; border-radius: 4px; }
+
+/* ── Status ────────────────────────────────────────────────── */
+.tv-status {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.8); padding: 20px 40px; border-radius: 8px;
+    font-size: 20px; z-index: 1000;
+}
+.tv-status.hidden { display: none; }
+
+/* Scrollbar hide */
+::-webkit-scrollbar { display: none; }
