@@ -121,8 +121,16 @@
         <div class="loader-sub" id="loader-sub">Connecting to server</div>
     </div>
 
-    <iframe id="player-iframe" class="player-frame" allowfullscreen allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-            referrerpolicy="no-referrer"></iframe>
+    <iframe id="player-iframe" class="player-frame" allowfullscreen allow="autoplay; fullscreen; picture-in-picture"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups" tabindex="0"></iframe>
+
+    <!-- Persistent reminder — deliberately NOT tied to the auto-hide fade,
+         since once the remote's focus is handed to the iframe we can't
+         reliably run JS to bring the fade-in back. Sits above the iframe
+         via z-index regardless of DOM focus. -->
+    <div id="iframe-hint" style="position:absolute; bottom:18px; right:24px; z-index:25; font-size:13px; color:rgba(255,255,255,0.55); background:rgba(0,0,0,0.45); padding:6px 14px; border-radius:20px; display:none;">
+        Press BACK to return to controls
+    </div>
 
     <!-- Top overlay: title -->
     <div class="player-topbar" id="player-topbar">
@@ -137,6 +145,10 @@
         <div class="ctrl-btn ctrl-focusable" id="ctrl-back">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
             <span>Back</span>
+        </div>
+        <div class="ctrl-btn ctrl-focusable" id="ctrl-enter-player">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <span>Play / Control Video</span>
         </div>
         <div class="ctrl-sep"></div>
         <div class="server-pills" id="server-pills"></div>
@@ -205,8 +217,8 @@
     var settingsTab = 'servers';
 
     // Remote-control focus engine
-    var zone = 'controls'; // 'controls' | 'season' | 'episodes' | 'settings-tabs' | 'settings-list' | 'iframe'
-    var controlIdx = 0;
+    var zone = 'controls'; // 'controls' | 'season' | 'episodes' | 'settings-tabs' | 'settings-list'
+    var controlIdx = 1; // starts on "Play / Control Video", right after Back
     var epIdx = 0;
     var settingsIdx = 0;
     var settingsTabIdx = 0;
@@ -214,52 +226,49 @@
 
     function goBack() { window.location.href = 'detail.html?id=' + id + '&type=' + type; }
 
-    /* ── Stream sources ────────────────────────────────────────── */
+    /* ── Stream sources ──────────────────────────────────────────
+       Pulled from the real backend (StreamRoutes.kt):
+         GET /api/stream/movie/{tmdbId}?imdbId=...
+         GET /api/stream/tv/{tmdbId}/season/{season}/episode/{episode}?imdbId=...
+       imdbId is optional — passed along when TMDB gives us one, since
+       the backend's VidSrc v2 source needs it for the 1080p mirror. */
     function getImdbId(data) {
         if (data.imdb_id) return data.imdb_id;
         if (data.external_ids && data.external_ids.imdb_id) return data.external_ids.imdb_id;
-        return '';
+        return null;
     }
 
-    function fetchSources(mediaData) {
-        var imdbId = getImdbId(mediaData);
-        var url = '/api/stream/' + type + '/' + id;
-
-        if (type === 'tv') {
-            url += '/season/' + currentSeason + '/episode/' + currentEp;
+    function fetchSources(imdbId) {
+        var url;
+        if (type === 'movie') {
+            url = '/api/stream/movie/' + id;
+        } else {
+            url = '/api/stream/tv/' + id + '/season/' + currentSeason + '/episode/' + currentEp;
         }
-
-        if (imdbId) {
-            url += (url.indexOf('?') === -1 ? '?' : '&') + 'imdbId=' + imdbId;
-        }
+        if (imdbId) url += '?imdbId=' + encodeURIComponent(imdbId);
 
         var xhr = new XMLHttpRequest();
         xhr.open('GET', url, true);
         xhr.onreadystatechange = function() {
             if (xhr.readyState !== 4) return;
-            if (xhr.status === 200) {
-                var data = JSON.parse(xhr.responseText);
-                sources = data.sources || [];
-                if (sources.length > 0) {
-                    renderServerPills();
-                    renderSettingsServers();
-                    loadSource(0);
-                    // Automatically show controls for 8s so user can see server options
-                    showControls();
-                } else {
-                    showError('No streams found for this title.');
-                }
-            } else {
-                showError('Failed to fetch stream sources.');
+            if (xhr.status !== 200) {
+                document.getElementById('loader-title').innerHTML = 'No servers available';
+                document.getElementById('loader-sub').innerHTML = 'Please try again later';
+                return;
             }
+            var data = JSON.parse(xhr.responseText);
+            sources = data.sources || [];
+            if (!sources.length) {
+                document.getElementById('loader-title').innerHTML = 'No servers available';
+                document.getElementById('loader-sub').innerHTML = 'Please try again later';
+                return;
+            }
+            renderServerPills();
+            renderSettingsServers();
+            loadSource(0);
+            updateFocus();
         };
         xhr.send();
-    }
-
-    function showError(msg) {
-        document.getElementById('loader-title').innerHTML = 'Playback Error';
-        document.getElementById('loader-sub').innerHTML = msg;
-        document.getElementById('player-loader').classList.remove('hidden');
     }
 
     function loadSource(i) {
@@ -277,12 +286,7 @@
             if (badge) badge.innerHTML = k === i ? 'Active' : 'Switch';
         }
 
-        setTimeout(function() {
-            document.getElementById('player-loader').classList.add('hidden');
-            // Auto-focus the player so the first OK press hits the play button
-            zone = 'iframe';
-            updateFocus();
-        }, 1800);
+        setTimeout(function() { document.getElementById('player-loader').classList.add('hidden'); }, 1800);
     }
 
     function renderServerPills() {
@@ -338,8 +342,10 @@
                 document.getElementById('loader-sub').innerHTML = (data.release_date || '').substring(0, 4);
             }
 
-            sources = []; // Clear existing
-            fetchSources(data);
+            sources = buildSources();
+            renderServerPills();
+            renderSettingsServers();
+            loadSource(0);
             updateFocus();
         };
         xhr.send();
@@ -441,9 +447,65 @@
     }
 
     function handleBack() {
+        if (iframeMode) { exitIframeMode(); return; }
         if (panelMode) closePanel();
         else goBack();
     }
+
+    /* ── Handing the remote off to the VidSrc iframe ─────────────
+       Cross-origin iframes are isolated by the browser: once the
+       iframe holds real DOM focus, our document.onkeydown below
+       simply never fires for those key presses — the browser
+       delivers them straight to VidSrc's own page instead. That's
+       what lets the remote's D-pad/OK reach VidSrc's own play
+       button and controls; it's also why we can't just "listen
+       harder" for them from here.
+
+       To get back out, we don't rely on catching a keypress (we
+       can't). Instead we push a history entry before handing off
+       focus, then use window/popstate signals — which the browser
+       still delivers to the TOP window regardless of which frame
+       has focus — to detect that the user backed out and reclaim
+       focus for our own controls. */
+    var iframeMode = false;
+
+    function enterIframeMode() {
+        iframeMode = true;
+        document.getElementById('iframe-hint').style.display = 'block';
+        clearTimeout(hideTimer);
+        document.getElementById('player-topbar').classList.remove('visible');
+        document.getElementById('player-controls').classList.remove('visible');
+        clearFocus();
+        try {
+            history.pushState({ cinestreamPlayer: true }, '');
+        } catch (e) { /* history API unavailable — hint text still tells the user to press BACK */ }
+        var frame = document.getElementById('player-iframe');
+        frame.focus();
+    }
+
+    function exitIframeMode() {
+        iframeMode = false;
+        document.getElementById('iframe-hint').style.display = 'none';
+        try { document.body.focus(); } catch (e) {}
+        zone = 'controls';
+        showControls();
+        updateFocus();
+    }
+
+    window.addEventListener('popstate', function() {
+        if (iframeMode) {
+            try { history.pushState({ cinestreamPlayer: true }, ''); } catch (e) {}
+            exitIframeMode();
+        }
+    });
+    // Some TV browsers deliver focus changes as window blur/focus rather
+    // than (or in addition to) popstate — handle both as redundant signals.
+    window.addEventListener('blur', function() {
+        if (document.activeElement === document.getElementById('player-iframe')) iframeMode = true;
+    });
+    window.addEventListener('focus', function() {
+        if (iframeMode) exitIframeMode();
+    });
 
     /* ── Remote-control focus engine ──────────────────────────── */
     function getControlItems() {
@@ -482,8 +544,6 @@
         } else if (zone === 'settings-list') {
             var listItems = document.querySelectorAll('#stab-' + settingsTab + ' .setting-item');
             if (listItems[settingsIdx]) listItems[settingsIdx].classList.add('tv-focused');
-        } else if (zone === 'iframe') {
-            document.getElementById('player-iframe').focus();
         }
     }
 
@@ -492,9 +552,6 @@
             var items = getControlItems();
             if (dir === 'left' && controlIdx > 0) controlIdx--;
             else if (dir === 'right' && controlIdx < items.length - 1) controlIdx++;
-            else if (dir === 'up') { zone = 'iframe'; }
-        } else if (zone === 'iframe') {
-            if (dir === 'down') { zone = 'controls'; showControls(); }
         } else if (zone === 'season') {
             if (dir === 'left') changeSeason(-1);
             else if (dir === 'right') changeSeason(1);
@@ -517,17 +574,12 @@
     }
 
     function enter() {
-        if (zone === 'iframe') {
-            // Logic for clicking inside iframe is handled by browser focus,
-            // but we ensure the iframe is targeted.
-            document.getElementById('player-iframe').focus();
-            return;
-        }
         if (zone === 'controls') {
             var items = getControlItems();
             var el = items[controlIdx];
             if (!el) return;
             if (el.id === 'ctrl-back') goBack();
+            else if (el.id === 'ctrl-enter-player') enterIframeMode();
             else if (el.id === 'ctrl-episodes') openPanel('episodes');
             else if (el.id === 'ctrl-settings') openPanel('settings');
             else if (el.className.indexOf('server-pill') !== -1) loadSource(+el.getAttribute('data-i'));
@@ -560,7 +612,7 @@
                 document.getElementById('player-topbar').classList.remove('visible');
                 document.getElementById('player-controls').classList.remove('visible');
             }
-        }, 8000); // 8 seconds for TV
+        }, 5000);
     }
 
     document.onkeydown = function(e) {
