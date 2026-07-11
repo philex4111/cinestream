@@ -342,11 +342,7 @@
                 document.getElementById('loader-sub').innerHTML = (data.release_date || '').substring(0, 4);
             }
 
-            sources = buildSources();
-            renderServerPills();
-            renderSettingsServers();
-            loadSource(0);
-            updateFocus();
+            fetchSources(getImdbId(data));
         };
         xhr.send();
     }
