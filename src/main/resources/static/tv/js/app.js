@@ -3,6 +3,7 @@ var TVApp = {
     zone: 'rail', // 'nav', 'hero', 'rail', 'tab'
     navIdx: 1, heroIdx: 0, railIdx: 0, cardIdx: 0, tabIdx: 0,
     rails: ['top10', 'trending', 'movies', 'tv'],
+    railScroll: {}, // remembers each rail's current scroll window
     data: {},
     api: '/api',
     heroTimer: null,
@@ -69,6 +70,8 @@ var TVApp = {
             if (this.currentTab === 'tv' && all[i].media_type === 'tv') filtered.push(all[i]);
         }
         this.data['trending'] = filtered;
+        this.railScroll['trending'] = 0;
+        if (this.rails[this.railIdx] === 'trending') this.cardIdx = 0;
         this.renderRail('trending', filtered);
     },
 
@@ -202,23 +205,34 @@ var TVApp = {
             if (card) {
                 card.classList.add('tv-focused');
                 var slider = document.getElementById('slider-' + key);
+                var wrap = slider.parentNode; // .slider-wrap
 
-                // FIXED SCROLL CLAMP LOGIC:
-                // We ensure the rail stops moving once the end items fill the screen.
+                // WINDOWED SCROLL LOGIC:
+                // Measure the real rendered card width/gap from the DOM instead of
+                // guessing, so the math always matches the actual CSS. Only shift
+                // the rail when the focused card would otherwise leave the visible
+                // window - the cursor moves freely within the window first, and the
+                // rail freezes once the last card is fully visible (never cut off).
                 var items = this.data[key] || [];
-                var cardWidth = 220; // width + gap
-                var containerWidth = 1160; // 1280 - 120 padding
-                var maxVisible = Math.floor(containerWidth / cardWidth); // approx 5
+                var firstCard = document.getElementById('card-' + key + '-0');
+                var cardWidth = firstCard ? firstCard.offsetWidth : 156;
+                var gap = 20; // matches .tv-slider gap in CSS
+                var step = cardWidth + gap;
+                var containerWidth = wrap.clientWidth;
+                var maxVisible = Math.max(1, Math.floor(containerWidth / step));
+                var maxScrollIdx = Math.max(0, items.length - maxVisible);
 
-                var scrollIdx = this.cardIdx;
-                var maxScrollIdx = items.length - maxVisible;
-
-                if (scrollIdx > maxScrollIdx) {
-                    scrollIdx = maxScrollIdx; // Freeze rail at the end
+                var scrollIdx = this.railScroll[key] || 0;
+                if (this.cardIdx < scrollIdx) {
+                    scrollIdx = this.cardIdx;
+                } else if (this.cardIdx > scrollIdx + maxVisible - 1) {
+                    scrollIdx = this.cardIdx - maxVisible + 1;
                 }
+                if (scrollIdx > maxScrollIdx) scrollIdx = maxScrollIdx;
                 if (scrollIdx < 0) scrollIdx = 0;
+                this.railScroll[key] = scrollIdx;
 
-                slider.style.transform = 'translateX(-' + (scrollIdx * cardWidth) + 'px)';
+                slider.style.transform = 'translateX(-' + (scrollIdx * step) + 'px)';
 
                 // Shift whole content up. Each rail is 280px high.
                 var yShift = (this.railIdx * 250) + 210;
