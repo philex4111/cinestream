@@ -121,8 +121,8 @@
         <div class="loader-sub" id="loader-sub">Connecting to server</div>
     </div>
 
-    <iframe id="player-iframe" class="player-frame" allowfullscreen allow="autoplay; fullscreen; picture-in-picture"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+    <iframe id="player-iframe" class="player-frame" allowfullscreen allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+            referrerpolicy="no-referrer"></iframe>
 
     <!-- Top overlay: title -->
     <div class="player-topbar" id="player-topbar">
@@ -244,6 +244,8 @@
                     renderServerPills();
                     renderSettingsServers();
                     loadSource(0);
+                    // Automatically show controls for 8s so user can see server options
+                    showControls();
                 } else {
                     showError('No streams found for this title.');
                 }
@@ -542,7 +544,7 @@
                 document.getElementById('player-topbar').classList.remove('visible');
                 document.getElementById('player-controls').classList.remove('visible');
             }
-        }, 5000);
+        }, 8000); // 8 seconds for TV
     }
 
     document.onkeydown = function(e) {
