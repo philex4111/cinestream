@@ -203,14 +203,22 @@ var TVApp = {
                 card.classList.add('tv-focused');
                 var slider = document.getElementById('slider-' + key);
 
-                // Fixed Position Logic:
-                // Don't scroll further once the last movie is visible on the right.
-                var maxIdx = (this.data[key] || []).length - 1;
+                // FIXED SCROLL CLAMP LOGIC:
+                // We ensure the rail stops moving once the end items fill the screen.
+                var items = this.data[key] || [];
+                var cardWidth = 220; // width + gap
+                var containerWidth = 1160; // 1280 - 120 padding
+                var maxVisible = Math.floor(containerWidth / cardWidth); // approx 5
+
                 var scrollIdx = this.cardIdx;
-                if (this.cardIdx === maxIdx && maxIdx > 0) {
-                    scrollIdx = maxIdx - 1; // Stay at the same scroll position as the second-to-last item
+                var maxScrollIdx = items.length - maxVisible;
+
+                if (scrollIdx > maxScrollIdx) {
+                    scrollIdx = maxScrollIdx; // Freeze rail at the end
                 }
-                slider.style.transform = 'translateX(-' + (scrollIdx * 220) + 'px)';
+                if (scrollIdx < 0) scrollIdx = 0;
+
+                slider.style.transform = 'translateX(-' + (scrollIdx * cardWidth) + 'px)';
 
                 // Shift whole content up. Each rail is 280px high.
                 var yShift = (this.railIdx * 250) + 210;
