@@ -205,7 +205,7 @@
     var settingsTab = 'servers';
 
     // Remote-control focus engine
-    var zone = 'controls'; // 'controls' | 'season' | 'episodes' | 'settings-tabs' | 'settings-list'
+    var zone = 'controls'; // 'controls' | 'season' | 'episodes' | 'settings-tabs' | 'settings-list' | 'iframe'
     var controlIdx = 0;
     var epIdx = 0;
     var settingsIdx = 0;
@@ -277,7 +277,12 @@
             if (badge) badge.innerHTML = k === i ? 'Active' : 'Switch';
         }
 
-        setTimeout(function() { document.getElementById('player-loader').classList.add('hidden'); }, 1800);
+        setTimeout(function() {
+            document.getElementById('player-loader').classList.add('hidden');
+            // Auto-focus the player so the first OK press hits the play button
+            zone = 'iframe';
+            updateFocus();
+        }, 1800);
     }
 
     function renderServerPills() {
@@ -477,6 +482,8 @@
         } else if (zone === 'settings-list') {
             var listItems = document.querySelectorAll('#stab-' + settingsTab + ' .setting-item');
             if (listItems[settingsIdx]) listItems[settingsIdx].classList.add('tv-focused');
+        } else if (zone === 'iframe') {
+            document.getElementById('player-iframe').focus();
         }
     }
 
@@ -485,6 +492,9 @@
             var items = getControlItems();
             if (dir === 'left' && controlIdx > 0) controlIdx--;
             else if (dir === 'right' && controlIdx < items.length - 1) controlIdx++;
+            else if (dir === 'up') { zone = 'iframe'; }
+        } else if (zone === 'iframe') {
+            if (dir === 'down') { zone = 'controls'; showControls(); }
         } else if (zone === 'season') {
             if (dir === 'left') changeSeason(-1);
             else if (dir === 'right') changeSeason(1);
@@ -507,6 +517,12 @@
     }
 
     function enter() {
+        if (zone === 'iframe') {
+            // Logic for clicking inside iframe is handled by browser focus,
+            // but we ensure the iframe is targeted.
+            document.getElementById('player-iframe').focus();
+            return;
+        }
         if (zone === 'controls') {
             var items = getControlItems();
             var el = items[controlIdx];
