@@ -121,8 +121,8 @@
         <div class="loader-sub" id="loader-sub">Connecting to server</div>
     </div>
 
-    <iframe id="player-iframe" class="player-frame" allowfullscreen allow="autoplay; fullscreen; picture-in-picture"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups" tabindex="0"></iframe>
+    <iframe id="player-iframe" class="player-frame" allowfullscreen allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+            referrerpolicy="no-referrer" tabindex="0"></iframe>
 
     <!-- Persistent reminder — deliberately NOT tied to the auto-hide fade,
          since once the remote's focus is handed to the iframe we can't
