@@ -6,71 +6,558 @@
     <link rel="stylesheet" href="../css/main.css">
     <link rel="stylesheet" href="css/tv.css">
     <style>
-        body { background: #000; margin: 0; padding: 0; overflow: hidden; }
-        .player-frame { width: 100vw; height: 100vh; border: none; }
-        .player-overlay-tv {
-            position: absolute; top: 30px; left: 40px;
-            background: rgba(0,0,0,0.6); padding: 15px 25px;
-            border-radius: var(--radius-md); color: #fff;
-            font-family: 'Inter', sans-serif; pointer-events: none;
-            opacity: 1; transition: opacity 0.5s;
+        html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; }
+        .player-stage { position: relative; width: 100vw; height: 100vh; background: #000; }
+        .player-frame { width: 100%; height: 100%; border: none; display: block; }
+
+        /* ── Loading overlay ─────────────────────────────────── */
+        .player-loader {
+            position: absolute; inset: 0; background: #000; z-index: 50;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+            transition: opacity 0.5s ease;
         }
-        .player-overlay-tv.hidden { opacity: 0; }
+        .player-loader.hidden { opacity: 0; pointer-events: none; }
+        .loader-spinner {
+            width: 56px; height: 56px; border: 5px solid rgba(255,255,255,0.15);
+            border-top-color: #E50914; border-radius: 50%; animation: tv-spin 0.9s linear infinite;
+        }
+        @keyframes tv-spin { to { transform: rotate(360deg); } }
+        .loader-title { font-size: 24px; font-weight: 700; color: #fff; }
+        .loader-sub { font-size: 16px; color: #b3b3b3; }
+
+        /* ── Top overlay (title) ─────────────────────────────── */
+        .player-topbar {
+            position: absolute; top: 0; left: 0; right: 0; z-index: 20;
+            display: flex; align-items: center; gap: 20px; padding: 30px 50px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.85), transparent);
+            opacity: 0; transition: opacity 0.4s ease;
+        }
+        .player-topbar.visible { opacity: 1; }
+        .topbar-title { font-size: 26px; font-weight: 800; color: #fff; }
+        .topbar-sub { font-size: 16px; color: #b3b3b3; margin-top: 2px; }
+
+        /* ── Bottom control bar ──────────────────────────────── */
+        .player-controls {
+            position: absolute; bottom: 0; left: 0; right: 0; z-index: 20;
+            display: flex; align-items: center; gap: 14px; padding: 24px 50px;
+            background: linear-gradient(to top, rgba(0,0,0,0.92), transparent);
+            opacity: 0; transition: opacity 0.4s ease;
+        }
+        .player-controls.visible { opacity: 1; }
+        .ctrl-btn {
+            min-width: 56px; height: 56px; padding: 0 20px; border-radius: 28px;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            background: rgba(255,255,255,0.08); color: #fff; border: 3px solid transparent;
+            font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .ctrl-btn svg { width: 22px; height: 22px; }
+        .ctrl-btn.active { background: rgba(229,9,20,0.3); }
+        .ctrl-sep { flex: 1; }
+        .server-pills { display: flex; gap: 10px; }
+        .server-pill {
+            padding: 12px 22px; border-radius: 50px; font-size: 14px; font-weight: 700;
+            color: #b3b3b3; background: rgba(255,255,255,0.08); border: 3px solid transparent;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .server-pill.active { background: #E50914; color: #fff; }
+
+        /* Shared TV remote focus ring */
+        .tv-focused { border-color: #fff !important; box-shadow: 0 0 0 3px rgba(255,255,255,0.25); transform: scale(1.06); }
+
+        /* ── Side panel (Episodes / Settings) ────────────────── */
+        .side-panel {
+            position: absolute; top: 0; right: 0; bottom: 0; z-index: 30;
+            width: 560px; transform: translateX(100%);
+            background: rgba(8,8,8,0.97); border-left: 1px solid #262626;
+            transition: transform 0.35s ease; display: flex; flex-direction: column;
+        }
+        .side-panel.open { transform: translateX(0); }
+        .panel-header { padding: 34px 40px 20px; border-bottom: 1px solid #262626; flex-shrink: 0; }
+        .panel-header h3 { font-size: 24px; font-weight: 800; color: #fff; }
+        .panel-header p { font-size: 14px; color: #888; margin-top: 4px; }
+        .panel-body { flex: 1; overflow-y: auto; padding: 20px 40px 40px; }
+
+        .season-switcher {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 22px; margin-bottom: 22px; border-radius: 10px;
+            background: rgba(255,255,255,0.06); border: 3px solid transparent;
+            font-size: 18px; font-weight: 700; color: #fff;
+        }
+        .season-switcher span.arrow { color: #E50914; font-size: 20px; }
+
+        .panel-ep-item {
+            display: flex; gap: 16px; padding: 14px; border-radius: 10px; margin-bottom: 10px;
+            border: 3px solid transparent; position: relative;
+        }
+        .panel-ep-item.watching { background: rgba(229,9,20,0.12); }
+        .panel-ep-thumb { width: 140px; aspect-ratio: 16/9; object-fit: cover; border-radius: 6px; background: #1a1a1a; flex-shrink: 0; }
+        .panel-ep-num { font-size: 13px; color: #888; margin-bottom: 4px; }
+        .panel-ep-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+        .panel-ep-desc { font-size: 13px; color: #aaa; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .watching-badge { position: absolute; top: 10px; left: 10px; background: #E50914; color: #fff; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; }
+
+        .settings-tabs { display: flex; gap: 10px; margin-bottom: 22px; }
+        .settings-tab { padding: 10px 18px; border-radius: 50px; font-size: 14px; font-weight: 700; color: #b3b3b3; background: rgba(255,255,255,0.06); border: 3px solid transparent; }
+        .settings-tab.active { color: #fff; background: rgba(229,9,20,0.3); }
+        .setting-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 18px; border-radius: 10px; margin-bottom: 10px;
+            background: rgba(255,255,255,0.04); border: 3px solid transparent;
+        }
+        .setting-item-label { font-size: 16px; font-weight: 700; color: #fff; }
+        .setting-item-sub { font-size: 13px; color: #888; margin-top: 2px; }
+        .setting-item-badge { font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 50px; background: #333; color: #ccc; text-transform: uppercase; }
+        .setting-item.active .setting-item-badge { background: #E50914; color: #fff; }
+        .settings-note { font-size: 13px; color: #888; line-height: 1.5; margin-bottom: 18px; }
     </style>
 </head>
 <body>
-    <div class="player-overlay-tv" id="overlay">
-        <h2 id="title" style="font-size: 24px; margin-bottom: 5px;">Loading...</h2>
-        <p id="subtitle" style="font-size: 14px; color: var(--grey-2);"></p>
-        <p style="font-size: 12px; margin-top: 10px; color: var(--crimson);">Press BACK on remote to exit</p>
+<div class="player-stage" id="player-stage">
+
+    <!-- Loading overlay, shown until the stream source is ready -->
+    <div class="player-loader" id="player-loader">
+        <div class="loader-spinner"></div>
+        <div class="loader-title" id="loader-title">Loading...</div>
+        <div class="loader-sub" id="loader-sub">Connecting to server</div>
     </div>
 
-    <iframe id="player" class="player-frame" allowfullscreen allow="autoplay; fullscreen"></iframe>
+    <iframe id="player-iframe" class="player-frame" allowfullscreen allow="autoplay; fullscreen; picture-in-picture"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
 
-    <script>
-        var p = new URLSearchParams(window.location.search);
-        var id = p.get('id');
-        var type = p.get('type') || 'movie';
-        var season = p.get('season') || '1';
-        var episode = p.get('episode') || '1';
+    <!-- Top overlay: title -->
+    <div class="player-topbar" id="player-topbar">
+        <div>
+            <div class="topbar-title" id="topbar-title">Loading...</div>
+            <div class="topbar-sub" id="topbar-sub"></div>
+        </div>
+    </div>
 
-        // Set Title
+    <!-- Bottom overlay: remote-navigable controls -->
+    <div class="player-controls" id="player-controls">
+        <div class="ctrl-btn ctrl-focusable" id="ctrl-back">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            <span>Back</span>
+        </div>
+        <div class="ctrl-sep"></div>
+        <div class="server-pills" id="server-pills"></div>
+        <div class="ctrl-btn ctrl-focusable" id="ctrl-episodes" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>
+            <span>Episodes</span>
+        </div>
+        <div class="ctrl-btn ctrl-focusable" id="ctrl-settings">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+            <span>Settings</span>
+        </div>
+    </div>
+
+    <!-- Side panel: Episodes / Settings -->
+    <div class="side-panel" id="side-panel">
+        <div id="panel-episodes" style="display:none; flex-direction:column; height:100%;">
+            <div class="panel-header"><h3>Episodes</h3><p>Use &#9664; &#9654; to change season, &#9650; &#9660; to browse</p></div>
+            <div class="panel-body">
+                <div class="season-switcher" id="season-switcher">
+                    <span class="arrow">&#9664;</span><span id="season-switcher-label">Season 1</span><span class="arrow">&#9654;</span>
+                </div>
+                <div id="panel-ep-list"></div>
+            </div>
+        </div>
+        <div id="panel-settings" style="display:none; flex-direction:column; height:100%;">
+            <div class="panel-header"><h3>Player Settings</h3><p>Customize your viewing experience</p></div>
+            <div class="panel-body">
+                <div class="settings-tabs" id="settings-tabs">
+                    <div class="settings-tab active" data-tab="servers">Servers</div>
+                    <div class="settings-tab" data-tab="quality">Quality</div>
+                </div>
+                <div id="stab-servers"><div id="settings-servers-list"></div></div>
+                <div id="stab-quality" style="display:none;">
+                    <p class="settings-note">Quality is managed automatically by the streaming server. Switch servers for different quality options.</p>
+                    <div class="setting-item active">
+                        <div><div class="setting-item-label">Auto</div><div class="setting-item-sub">Best available quality</div></div>
+                        <span class="setting-item-badge">Active</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    /* CineStream TV Player — ES5, remote-control (D-pad) driven.
+       Carries over watch.html's feature set (multi-server switching,
+       episodes panel with season browsing, settings panel, auto-hiding
+       controls) rebuilt around arrow-key/OK/Back input instead of
+       mouse hover, since a TV remote has neither. */
+
+    var p = new URLSearchParams(window.location.search);
+    var id = p.get('id');
+    var type = p.get('type') || 'movie';
+    var season = parseInt(p.get('season') || '1', 10);
+    var episode = parseInt(p.get('episode') || '1', 10);
+    if (!id) { window.location.href = 'index.html'; }
+
+    var sources = [];
+    var currentSource = 0;
+    var allSeasons = [];
+    var currentSeason = season;
+    var currentEp = episode;
+    var panelMode = null; // 'episodes' | 'settings' | null
+    var settingsTab = 'servers';
+
+    // Remote-control focus engine
+    var zone = 'controls'; // 'controls' | 'season' | 'episodes' | 'settings-tabs' | 'settings-list'
+    var controlIdx = 0;
+    var epIdx = 0;
+    var settingsIdx = 0;
+    var settingsTabIdx = 0;
+    var hideTimer = null;
+
+    function goBack() { window.location.href = 'detail.html?id=' + id + '&type=' + type; }
+
+    /* ── Stream sources ────────────────────────────────────────── */
+    function getImdbId(data) {
+        if (data.imdb_id) return data.imdb_id;
+        if (data.external_ids && data.external_ids.imdb_id) return data.external_ids.imdb_id;
+        return '';
+    }
+
+    function fetchSources(mediaData) {
+        var imdbId = getImdbId(mediaData);
+        var url = '/api/stream/' + type + '/' + id;
+
+        if (type === 'tv') {
+            url += '/season/' + currentSeason + '/episode/' + currentEp;
+        }
+
+        if (imdbId) {
+            url += (url.indexOf('?') === -1 ? '?' : '&') + 'imdbId=' + imdbId;
+        }
+
         var xhr = new XMLHttpRequest();
-        xhr.open('GET', '/api/tmdb/' + type + '/' + id, true);
+        xhr.open('GET', url, true);
         xhr.onreadystatechange = function() {
-            if (xhr.readyState === 4 && xhr.status === 200) {
+            if (xhr.readyState !== 4) return;
+            if (xhr.status === 200) {
                 var data = JSON.parse(xhr.responseText);
-                document.getElementById('title').innerHTML = data.title || data.name;
-                if (type === 'tv') {
-                    document.getElementById('subtitle').innerHTML = 'Season ' + season + ' • Episode ' + episode;
+                sources = data.sources || [];
+                if (sources.length > 0) {
+                    renderServerPills();
+                    renderSettingsServers();
+                    loadSource(0);
                 } else {
-                    document.getElementById('subtitle').innerHTML = (data.release_date || '').substring(0,4);
+                    showError('No streams found for this title.');
                 }
+            } else {
+                showError('Failed to fetch stream sources.');
             }
         };
         xhr.send();
+    }
 
-        // Load Stream
-        var embedUrl = "";
-        if (type === 'movie') {
-            embedUrl = "https://vidsrc.me/embed/movie?tmdb=" + id;
-        } else {
-            embedUrl = "https://vidsrc.me/embed/tv?tmdb=" + id + "&season=" + season + "&episode=" + episode;
+    function showError(msg) {
+        document.getElementById('loader-title').innerHTML = 'Playback Error';
+        document.getElementById('loader-sub').innerHTML = msg;
+        document.getElementById('player-loader').classList.remove('hidden');
+    }
+
+    function loadSource(i) {
+        if (!sources[i]) return;
+        currentSource = i;
+        document.getElementById('player-iframe').src = sources[i].embedUrl;
+
+        var pills = document.querySelectorAll('.server-pill');
+        for (var j = 0; j < pills.length; j++) pills[j].className = 'server-pill ctrl-focusable' + (j === i ? ' active' : '');
+
+        var settingsItems = document.querySelectorAll('.settings-server-item');
+        for (var k = 0; k < settingsItems.length; k++) {
+            settingsItems[k].className = 'setting-item settings-server-item' + (k === i ? ' active' : '');
+            var badge = settingsItems[k].querySelector('.setting-item-badge');
+            if (badge) badge.innerHTML = k === i ? 'Active' : 'Switch';
         }
-        document.getElementById('player').src = embedUrl;
 
-        // Auto-hide overlay
-        setTimeout(function() {
-            document.getElementById('overlay').className += ' hidden';
-        }, 5000);
+        setTimeout(function() { document.getElementById('player-loader').classList.add('hidden'); }, 1800);
+    }
 
-        // Remote Back Handling
-        document.onkeydown = function(e) {
-            var k = e.keyCode || e.which;
-            if (k === 461 || k === 8) {
-                window.location.href = 'detail.html?id=' + id + '&type=' + type;
+    function renderServerPills() {
+        var el = document.getElementById('server-pills');
+        var html = '';
+        for (var i = 0; i < sources.length; i++) {
+            html += '<div class="server-pill ctrl-focusable' + (i === 0 ? ' active' : '') + '" data-i="' + i + '">' + sources[i].provider + '</div>';
+        }
+        el.innerHTML = html;
+    }
+
+    function renderSettingsServers() {
+        var el = document.getElementById('settings-servers-list');
+        var html = '';
+        for (var i = 0; i < sources.length; i++) {
+            html += '<div class="setting-item settings-server-item' + (i === 0 ? ' active' : '') + '" data-i="' + i + '">' +
+                '<div><div class="setting-item-label">' + sources[i].provider + '</div><div class="setting-item-sub">HD</div></div>' +
+                '<span class="setting-item-badge">' + (i === 0 ? 'Active' : 'Switch') + '</span></div>';
+        }
+        el.innerHTML = html;
+    }
+
+    /* ── Media info (title, seasons list) ────────────────────── */
+    function loadMediaInfo() {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '/api/tmdb/' + type + '/' + id, true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState !== 4) return;
+            if (xhr.status !== 200) {
+                document.getElementById('loader-title').innerHTML = 'Failed to load';
+                document.getElementById('loader-sub').innerHTML = 'Please try again';
+                return;
             }
+            var data = JSON.parse(xhr.responseText);
+            var title = data.title || data.name || '';
+            document.title = title + ' — CineStream';
+            document.getElementById('loader-title').innerHTML = title;
+            document.getElementById('topbar-title').innerHTML = title;
+
+            if (type === 'tv') {
+                var epLabel = 'Season ' + currentSeason + ' \u00B7 Episode ' + currentEp;
+                document.getElementById('loader-sub').innerHTML = epLabel;
+                document.getElementById('topbar-sub').innerHTML = epLabel;
+                document.getElementById('ctrl-episodes').style.display = 'flex';
+                document.getElementById('season-switcher-label').innerHTML = 'Season ' + currentSeason;
+
+                allSeasons = [];
+                var seasons = data.seasons || [];
+                for (var i = 0; i < seasons.length; i++) {
+                    if (seasons[i].season_number > 0) allSeasons.push(seasons[i]);
+                }
+            } else {
+                document.getElementById('loader-sub').innerHTML = (data.release_date || '').substring(0, 4);
+            }
+
+            sources = []; // Clear existing
+            fetchSources(data);
+            updateFocus();
         };
-    </script>
+        xhr.send();
+    }
+
+    /* ── Episodes panel ───────────────────────────────────────── */
+    function changeSeason(delta) {
+        var idx = -1;
+        for (var i = 0; i < allSeasons.length; i++) if (allSeasons[i].season_number === currentSeason) idx = i;
+        var newIdx = idx + delta;
+        if (newIdx < 0 || newIdx >= allSeasons.length) return;
+        currentSeason = allSeasons[newIdx].season_number;
+        document.getElementById('season-switcher-label').innerHTML = 'Season ' + currentSeason;
+        epIdx = 0;
+        loadPanelEpisodes(currentSeason);
+    }
+
+    function loadPanelEpisodes(seasonNum) {
+        var listEl = document.getElementById('panel-ep-list');
+        listEl.innerHTML = '<div style="text-align:center;padding:30px;color:#888;">Loading episodes...</div>';
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '/api/tmdb/tv/' + id + '/season/' + seasonNum, true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState !== 4) return;
+            if (xhr.status !== 200) {
+                listEl.innerHTML = '<div style="color:#888;padding:20px;">Failed to load episodes.</div>';
+                return;
+            }
+            var data = JSON.parse(xhr.responseText);
+            renderPanelEpisodes(data.episodes || [], seasonNum);
+        };
+        xhr.send();
+    }
+
+    function renderPanelEpisodes(eps, seasonNum) {
+        var listEl = document.getElementById('panel-ep-list');
+        if (!eps.length) { listEl.innerHTML = '<div style="color:#888;padding:20px;">No episodes.</div>'; return; }
+        var html = '';
+        for (var i = 0; i < eps.length; i++) {
+            var ep = eps[i];
+            var isWatching = seasonNum === currentSeason && ep.episode_number === currentEp;
+            var thumb = ep.still_path ? 'https://image.tmdb.org/t/p/w300' + ep.still_path : '';
+            html += '<div class="panel-ep-item' + (isWatching ? ' watching' : '') + '" data-season="' + seasonNum + '" data-ep="' + ep.episode_number + '">' +
+                (isWatching ? '<div class="watching-badge">Watching</div>' : '') +
+                (thumb ? '<img class="panel-ep-thumb" src="' + thumb + '">' : '<div class="panel-ep-thumb" style="display:flex;align-items:center;justify-content:center;color:#555;font-size:22px;">\u25B6</div>') +
+                '<div><div class="panel-ep-num">' + seasonNum + '. Episode ' + ep.episode_number + '</div>' +
+                '<div class="panel-ep-title">' + (ep.name || ('Episode ' + ep.episode_number)) + '</div>' +
+                '<div class="panel-ep-desc">' + (ep.overview || '') + '</div></div></div>';
+        }
+        listEl.innerHTML = html;
+        if (zone === 'episodes' || zone === 'season') updateFocus();
+    }
+
+    /* ── Settings panel ───────────────────────────────────────── */
+    function switchSettingsTab(tab) {
+        settingsTab = tab;
+        var tabs = document.querySelectorAll('.settings-tab');
+        for (var i = 0; i < tabs.length; i++) {
+            tabs[i].className = 'settings-tab' + (tabs[i].getAttribute('data-tab') === tab ? ' active' : '');
+        }
+        document.getElementById('stab-servers').style.display = tab === 'servers' ? 'block' : 'none';
+        document.getElementById('stab-quality').style.display = tab === 'quality' ? 'block' : 'none';
+        settingsIdx = 0;
+    }
+
+    /* ── Panel open/close ─────────────────────────────────────── */
+    function openPanel(mode) {
+        if (panelMode === mode) { closePanel(); return; }
+        panelMode = mode;
+        document.getElementById('side-panel').classList.add('open');
+        document.getElementById('panel-episodes').style.display = mode === 'episodes' ? 'flex' : 'none';
+        document.getElementById('panel-settings').style.display = mode === 'settings' ? 'flex' : 'none';
+        document.getElementById('ctrl-episodes').classList.toggle('active', mode === 'episodes');
+        document.getElementById('ctrl-settings').classList.toggle('active', mode === 'settings');
+
+        clearTimeout(hideTimer);
+        document.getElementById('player-topbar').classList.add('visible');
+        document.getElementById('player-controls').classList.add('visible');
+
+        if (mode === 'episodes') {
+            zone = 'season';
+            loadPanelEpisodes(currentSeason);
+        } else {
+            zone = 'settings-tabs';
+            settingsTabIdx = 0;
+            switchSettingsTab('servers');
+        }
+        updateFocus();
+    }
+
+    function closePanel() {
+        panelMode = null;
+        document.getElementById('side-panel').classList.remove('open');
+        document.getElementById('ctrl-episodes').classList.remove('active');
+        document.getElementById('ctrl-settings').classList.remove('active');
+        zone = 'controls';
+        updateFocus();
+        showControls();
+    }
+
+    function handleBack() {
+        if (panelMode) closePanel();
+        else goBack();
+    }
+
+    /* ── Remote-control focus engine ──────────────────────────── */
+    function getControlItems() {
+        var all = document.querySelectorAll('.ctrl-focusable');
+        var visible = [];
+        for (var i = 0; i < all.length; i++) {
+            if (all[i].offsetParent !== null) visible.push(all[i]);
+        }
+        return visible;
+    }
+
+    function clearFocus() {
+        var all = document.querySelectorAll('.tv-focused');
+        for (var i = 0; i < all.length; i++) all[i].classList.remove('tv-focused');
+    }
+
+    function updateFocus() {
+        clearFocus();
+        if (zone === 'controls') {
+            var items = getControlItems();
+            if (controlIdx >= items.length) controlIdx = items.length - 1;
+            if (controlIdx < 0) controlIdx = 0;
+            if (items[controlIdx]) items[controlIdx].classList.add('tv-focused');
+        } else if (zone === 'season') {
+            var sw = document.getElementById('season-switcher');
+            if (sw) sw.classList.add('tv-focused');
+        } else if (zone === 'episodes') {
+            var epEls = document.querySelectorAll('.panel-ep-item');
+            if (epEls[epIdx]) {
+                epEls[epIdx].classList.add('tv-focused');
+                epEls[epIdx].scrollIntoView({ block: 'nearest' });
+            }
+        } else if (zone === 'settings-tabs') {
+            var tabs = document.querySelectorAll('.settings-tab');
+            if (tabs[settingsTabIdx]) tabs[settingsTabIdx].classList.add('tv-focused');
+        } else if (zone === 'settings-list') {
+            var listItems = document.querySelectorAll('#stab-' + settingsTab + ' .setting-item');
+            if (listItems[settingsIdx]) listItems[settingsIdx].classList.add('tv-focused');
+        }
+    }
+
+    function move(dir) {
+        if (zone === 'controls') {
+            var items = getControlItems();
+            if (dir === 'left' && controlIdx > 0) controlIdx--;
+            else if (dir === 'right' && controlIdx < items.length - 1) controlIdx++;
+        } else if (zone === 'season') {
+            if (dir === 'left') changeSeason(-1);
+            else if (dir === 'right') changeSeason(1);
+            else if (dir === 'down') { zone = 'episodes'; epIdx = 0; }
+        } else if (zone === 'episodes') {
+            var epEls = document.querySelectorAll('.panel-ep-item');
+            if (dir === 'up') { if (epIdx > 0) epIdx--; else zone = 'season'; }
+            else if (dir === 'down') { if (epIdx < epEls.length - 1) epIdx++; }
+        } else if (zone === 'settings-tabs') {
+            var tabs = document.querySelectorAll('.settings-tab');
+            if (dir === 'left' && settingsTabIdx > 0) settingsTabIdx--;
+            else if (dir === 'right' && settingsTabIdx < tabs.length - 1) settingsTabIdx++;
+            else if (dir === 'down') { zone = 'settings-list'; settingsIdx = 0; }
+        } else if (zone === 'settings-list') {
+            var listItems = document.querySelectorAll('#stab-' + settingsTab + ' .setting-item');
+            if (dir === 'up') { if (settingsIdx > 0) settingsIdx--; else zone = 'settings-tabs'; }
+            else if (dir === 'down') { if (settingsIdx < listItems.length - 1) settingsIdx++; }
+        }
+        updateFocus();
+    }
+
+    function enter() {
+        if (zone === 'controls') {
+            var items = getControlItems();
+            var el = items[controlIdx];
+            if (!el) return;
+            if (el.id === 'ctrl-back') goBack();
+            else if (el.id === 'ctrl-episodes') openPanel('episodes');
+            else if (el.id === 'ctrl-settings') openPanel('settings');
+            else if (el.className.indexOf('server-pill') !== -1) loadSource(+el.getAttribute('data-i'));
+        } else if (zone === 'episodes') {
+            var epEls = document.querySelectorAll('.panel-ep-item');
+            var item = epEls[epIdx];
+            if (item) {
+                var s = item.getAttribute('data-season'), e = item.getAttribute('data-ep');
+                window.location.href = 'player.html?id=' + id + '&type=tv&season=' + s + '&episode=' + e;
+            }
+        } else if (zone === 'settings-tabs') {
+            var tabs = document.querySelectorAll('.settings-tab');
+            var tab = tabs[settingsTabIdx];
+            if (tab) switchSettingsTab(tab.getAttribute('data-tab'));
+        } else if (zone === 'settings-list') {
+            var listItems = document.querySelectorAll('#stab-' + settingsTab + ' .setting-item');
+            var it = listItems[settingsIdx];
+            if (it && it.hasAttribute('data-i')) loadSource(+it.getAttribute('data-i'));
+        }
+        updateFocus();
+    }
+
+    /* ── Auto-hide controls, wake on remote input ─────────────── */
+    function showControls() {
+        document.getElementById('player-topbar').classList.add('visible');
+        document.getElementById('player-controls').classList.add('visible');
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(function() {
+            if (!panelMode) {
+                document.getElementById('player-topbar').classList.remove('visible');
+                document.getElementById('player-controls').classList.remove('visible');
+            }
+        }, 5000);
+    }
+
+    document.onkeydown = function(e) {
+        var k = e.keyCode || e.which;
+        showControls();
+        if (k === 37) move('left');
+        else if (k === 39) move('right');
+        else if (k === 38) move('up');
+        else if (k === 40) move('down');
+        else if (k === 13) enter();
+        else if (k === 461 || k === 8) { e.preventDefault(); handleBack(); }
+    };
+
+    showControls();
+    loadMediaInfo();
+</script>
 </body>
 </html>
